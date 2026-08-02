@@ -1,10 +1,12 @@
-const CACHE_NAME = "panel-alumnos-v5";
+const CACHE_NAME = "panel-alumnos-v6";
 const ASSETS = [
   "./",
   "./index.html",
   "./app.js",
   "./config.js",
   "./chart.min.js",
+  "./xlsx.full.min.js",
+  "./rutinas.xlsx",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",

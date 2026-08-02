@@ -242,6 +242,30 @@
   .novedad-texto{font-size:13px; color:var(--text);}
   .novedad-fecha{font-size:11px; color:var(--text-dim); margin-top:2px;}
 
+  .rpe-hist-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .rpe-hist-item:last-child{border-bottom:none;}
+  .rpe-hist-fecha{font-size:13px; color:var(--text);}
+  .rpe-hist-detalle{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .rpe-hist-valor{
+    font-size:18px; font-weight:800; color:var(--mustard); flex-shrink:0; margin-left:10px;
+  }
+
+  .ficha-item{
+    display:flex; align-items:center; gap:12px; padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .ficha-item:last-child{border-bottom:none;}
+  .ficha-icon{
+    width:44px; height:44px; border-radius:8px; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .ficha-icon svg{width:20px; height:20px; stroke:var(--track); fill:none; stroke-width:1.8;}
+  .ficha-nombre{font-size:14px; font-weight:600;}
+  a.ficha-link{color:inherit; text-decoration:none; display:flex; align-items:center; gap:12px; width:100%;}
+
   canvas{max-width:100%;}
 </style>
 </head>
@@ -335,6 +359,11 @@
       <button class="btn" id="rpeEnviar">Enviar</button>
       <div class="status-msg" id="rpeStatus"></div>
     </div>
+    <div class="card">
+      <h3>Tu historial de RPE</h3>
+      <canvas id="rpeChart" height="180"></canvas>
+      <div id="rpeHistorialLista"></div>
+    </div>
   </section>
 
   <section class="view" id="view-rm">
@@ -366,6 +395,13 @@
     <div class="card">
       <h3>Métodos de entrenamiento</h3>
       <div id="listaMetodos"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-fichas">
+    <div class="card">
+      <h3>Fichas por patrón de movimiento</h3>
+      <div id="listaFichas"></div>
     </div>
   </section>
 
@@ -415,9 +451,14 @@
     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>
     Videos
   </button>
+  <button data-view="fichas">
+    <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+    Fichas
+  </button>
 </nav>
 
 <script src="chart.min.js"></script>
+<script src="xlsx.full.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>

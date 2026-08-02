@@ -67,7 +67,7 @@ function initSelectorAlumno(){
 /* ---------- Navegación entre tabs ---------- */
 const TITULOS = {
   inicio: "Inicio", plan: "Mi Plan", tests: "Tests",
-  rpe: "RPE", rm: "Calculadora %RM", videos: "Videos",
+  rpe: "RPE", rm: "Calculadora %RM", videos: "Videos", fichas: "Fichas",
   sobre: "Sobre mí", faq: "Preguntas frecuentes"
 };
 
@@ -77,6 +77,7 @@ function goTo(view){
   $$("nav.tabbar button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   $("#tituloVista").textContent = TITULOS[view];
   if (view === "tests") renderTests();
+  if (view === "rpe") renderRpeHistorial();
   if (view === "sobre") renderSobre();
   if (view === "faq") renderFaq();
 }
@@ -162,10 +163,18 @@ function renderInicio(){
         <div class="detalle">Se suma cada vez que terminás todos los días de una semana</div></div></div>`;
   }
 
+  const hist = getRpeHistorial();
+  const ultimo = hist.length ? hist[hist.length - 1] : null;
   const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
-  $("#resumenRpe").innerHTML = pend.length
-    ? `<div class="detalle">Tenés ${pend.length} registro(s) de RPE sin enviar (se reintentará solo cuando tengas señal).</div>`
-    : `<div class="detalle">Todo tus registros de RPE están al día.</div>`;
+  let resumenRpeHtml = ultimo
+    ? `<div class="ejercicio"><div><div class="nombre">Último RPE: ${ultimo.rpe}/10 (${ultimo.fecha})</div>
+        <div class="detalle">Tocá "RPE" para ver tu historial completo</div></div></div>`
+    : `<div class="detalle">Todavía no registraste ningún RPE.</div>`;
+  if (pend.length){
+    resumenRpeHtml += `<div class="ejercicio"><div><div class="nombre">${pend.length} sin enviar a tu profe</div>
+        <div class="detalle">Se reintentará solo cuando tengas señal</div></div></div>`;
+  }
+  $("#resumenRpe").innerHTML = resumenRpeHtml;
 }
 
 /* ---------- Mi Plan (selector de semana + tabs de día + rutina) ---------- */
@@ -364,6 +373,67 @@ function initRpe(){
   $("#rpeEnviar").addEventListener("click", enviarRpe);
 }
 
+function rpeHistorialKey(){
+  return `rpe_historial_${alumnoActual}`;
+}
+function getRpeHistorial(){
+  return JSON.parse(localStorage.getItem(rpeHistorialKey()) || "[]");
+}
+function guardarEnHistorialRpe(payload){
+  const hist = getRpeHistorial();
+  hist.push({ fecha: payload.fecha, rpe: Number(payload.rpe), sueno: payload.sueno, dolor: payload.dolor });
+  hist.sort((a,b) => a.fecha.localeCompare(b.fecha));
+  localStorage.setItem(rpeHistorialKey(), JSON.stringify(hist));
+}
+
+let rpeChartInstance = null;
+function renderRpeHistorial(){
+  const hist = getRpeHistorial();
+  const ctx = $("#rpeChart").getContext("2d");
+  if (rpeChartInstance) rpeChartInstance.destroy();
+
+  if (!hist.length){
+    $("#rpeHistorialLista").innerHTML = `<div class="detalle">Todavía no registraste ningún RPE.</div>`;
+    return;
+  }
+
+  rpeChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: hist.map(h => h.fecha),
+      datasets: [{
+        label: "RPE",
+        data: hist.map(h => h.rpe),
+        borderColor: "#C1440E",
+        backgroundColor: "rgba(193,68,14,0.15)",
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: "#D8B93B"
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 10, ticks: { color: "#9A9A94", stepSize: 2 }, grid: { color: "#3A3A3E" } },
+        x: { ticks: { color: "#9A9A94" }, grid: { color: "#3A3A3E" } }
+      }
+    }
+  });
+
+  const ultimos = [...hist].reverse().slice(0, 10);
+  $("#rpeHistorialLista").innerHTML = ultimos.map(h => `
+    <div class="rpe-hist-item">
+      <div>
+        <div class="rpe-hist-fecha">${h.fecha}</div>
+        <div class="rpe-hist-detalle">${h.sueno ? `${h.sueno}hs de sueño` : ""}${h.dolor ? ` · ${h.dolor}` : ""}</div>
+      </div>
+      <div class="rpe-hist-valor">${h.rpe}</div>
+    </div>
+  `).join("");
+}
+
 async function enviarRpe(){
   const payload = {
     alumno: alumnoActual,
@@ -377,9 +447,14 @@ async function enviarRpe(){
   statusEl.className = "status-msg";
   statusEl.textContent = "Enviando...";
 
+  // Se guarda en el historial propio del alumno pase lo que pase con el envío
+  guardarEnHistorialRpe(payload);
+  renderRpeHistorial();
+
   if (!APPS_SCRIPT_URL){
     guardarPendiente(payload);
-    statusEl.textContent = "Backend no configurado todavía — guardado localmente.";
+    statusEl.textContent = "Guardado. (Tu profe todavía no activó el envío centralizado.)";
+    limpiarFormRpe();
     return;
   }
 
@@ -586,14 +661,86 @@ function renderFaq(){
   });
 }
 
+/* ---------- Carga de rutinas.xlsx (SheetJS) ---------- */
+async function cargarRutinasDesdeExcel(){
+  try{
+    const resp = await fetch("rutinas.xlsx");
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const nuevo = {};
+
+    wb.SheetNames.forEach(nombreHoja => {
+      if (nombreHoja === "LEEME") return;
+      if (!ALUMNOS.includes(nombreHoja)) return; // ignora pestañas que no son de un alumno
+
+      const filas = XLSX.utils.sheet_to_json(wb.Sheets[nombreHoja], { defval: "" });
+      const porSemana = {};
+
+      filas.forEach(f => {
+        const semana = Number(f["Semana"]);
+        const dia = Number(f["Día"] || f["Dia"]);
+        const nombreEj = String(f["Ejercicio"] || "").trim();
+        if (!semana || !dia || !nombreEj) return; // fila incompleta, se ignora
+
+        const ej = {
+          dia,
+          categoria: String(f["Categoría"] || f["Categoria"] || "").trim(),
+          nombre: nombreEj,
+          detalle: String(f["Detalle"] || ""),
+          reps: String(f["Series/Reps"] || "")
+        };
+        const circuito = f["Circuito"];
+        if (circuito !== "" && circuito !== undefined && circuito !== null){
+          ej.circuito = circuito;
+          ej.rounds = f["Rounds"];
+        }
+
+        if (!porSemana[semana]) porSemana[semana] = [];
+        porSemana[semana].push(ej);
+      });
+
+      if (Object.keys(porSemana).length) nuevo[nombreHoja] = porSemana;
+    });
+
+    RUTINAS = nuevo;
+  }catch(err){
+    console.error("No se pudo cargar rutinas.xlsx:", err);
+    // Si falla (sin conexión y todavía no cacheado, archivo con error, etc.)
+    // la app sigue funcionando con RUTINAS vacío — se ve el mensaje de
+    // "todavía no tenés rutina cargada" en vez de romperse.
+  }
+}
+
+/* ---------- Fichas (PDFs por patrón de movimiento) ---------- */
+function renderFichas(){
+  if (!FICHAS.length){
+    $("#listaFichas").innerHTML = `<div class="detalle">Todavía no hay fichas cargadas.</div>`;
+    return;
+  }
+  $("#listaFichas").innerHTML = FICHAS.map(f => `
+    <div class="ficha-item">
+      <a class="ficha-link" href="${f.archivo}" target="_blank" rel="noopener">
+        <div class="ficha-icon">
+          <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+        </div>
+        <div class="ficha-nombre">${f.patron}</div>
+      </a>
+    </div>
+  `).join("");
+}
+
 /* ---------- Init general ---------- */
-function renderAll(){
+async function renderAll(){
   if (!alumnoActual) return;
+  await rutinasListas;
   renderInicio();
   renderPlan();
   renderVideos();
+  renderFichas();
   reintentarPendientes();
 }
+
+const rutinasListas = cargarRutinasDesdeExcel();
 
 initSelectorAlumno();
 initRpe();

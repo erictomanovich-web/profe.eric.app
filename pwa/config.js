@@ -9,7 +9,7 @@
 // 1) URL del Google Apps Script (backend para RPE).
 //    Se completa cuando despleguemos el script de Google Sheets.
 //    Instrucciones en apps-script/INSTRUCCIONES.md
-const APPS_SCRIPT_URL = ""; // ej: "https://script.google.com/macros/s/XXXXX/exec"
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTtAJs1MDOMoceDODzDFoCbd_IKHdhOn6MEiKr3vBtR2_UW4U1opQs4n1hUtVvTJkj/exec";
 
 // 2) Lista de alumnos
 const ALUMNOS = [
@@ -54,59 +54,11 @@ const PINS = {
 };
 
 // 3) Rutinas por alumno, organizadas por SEMANA
-//    Cada alumno tiene un objeto { 1: [...], 2: [...], 3: [...] } donde
-//    la clave es el número de semana. La semana con el número MÁS ALTO
-//    es siempre la "semana actual" que ve el alumno por defecto — las
-//    anteriores quedan guardadas como historial que puede consultar.
-//    Para pasar a una semana nueva: agregá una clave nueva (ej: 4) sin
-//    borrar las anteriores.
-//
-//    Cada ejercicio dentro de una semana lleva:
-//    - "dia": número de día de entrenamiento (1, 2, 3...) — cada alumno
-//      puede tener una cantidad distinta de días (2, 3, 5, los que sean).
-//    - "categoria": SIEMPRE una de estas 5, escrita tal cual
-//      (respetando mayúsculas/tildes):
-//        "Entrada en calor", "Potencia", "Fuerza", "Core", "Cardio"
-//      La app las muestra siempre en ese orden dentro de cada día, y si
-//      un día no tiene ejercicios de alguna categoría, esa categoría no
-//      aparece.
-//    - "circuito" (opcional): número que agrupa ejercicios que se hacen
-//      en modalidad circuito. Ejercicios sueltos no llevan esta propiedad.
-//    - "rounds" (opcional, junto con "circuito"): cantidad de vueltas.
-//    reps: string libre ("3x10", "4x8-8-6-6", etc.)
-//    Todavía sin cargar (salvo Sebastián) — se completa a medida que el
-//    profe pasa las rutinas.
-const RUTINAS = {
-  "Sebastián Muratore": {
-    1: [
-      { dia: 1, categoria: "Entrada en calor", nombre: "Dorsiflexion de tobillo", detalle: "Movilidad", reps: "6 cada pierna", circuito: 1, rounds: 2 },
-      { dia: 1, categoria: "Entrada en calor", nombre: "Isquios touch and go", detalle: "Movilidad", reps: "6 cada pierna", circuito: 1, rounds: 2 },
-      { dia: 1, categoria: "Entrada en calor", nombre: "Air Squats", detalle: "Dominante de rodilla", reps: "8", circuito: 1, rounds: 2 },
-      { dia: 1, categoria: "Entrada en calor", nombre: "Push ups", detalle: "Empuje", reps: "7", circuito: 1, rounds: 2 },
-      { dia: 1, categoria: "Entrada en calor", nombre: "Plank", detalle: "Core", reps: "20''", circuito: 1, rounds: 2 },
-      { dia: 1, categoria: "Fuerza", nombre: "Back Squats", detalle: "Dominante de rodilla", reps: "5x5" },
-      { dia: 1, categoria: "Fuerza", nombre: "Bulgarian split Squats", detalle: "Dominante de rodilla", reps: "5x5" },
-      { dia: 1, categoria: "Fuerza", nombre: "Bench Press", detalle: "Empuje", reps: "5x5" },
-      { dia: 1, categoria: "Fuerza", nombre: "Shoulder press", detalle: "Empuje", reps: "5x5" },
-      { dia: 1, categoria: "Fuerza", nombre: "Vuelos laterales", detalle: "Empuje", reps: "4x10" },
-      { dia: 1, categoria: "Core", nombre: "Plank lateral", detalle: "Core", reps: "10'' de cada lado", circuito: 2, rounds: 3 },
-      { dia: 1, categoria: "Core", nombre: "Bug dead", detalle: "Core", reps: "20", circuito: 2, rounds: 3 },
-      { dia: 1, categoria: "Core", nombre: "Roll out", detalle: "Core", reps: "10", circuito: 2, rounds: 3 },
-      { dia: 2, categoria: "Entrada en calor", nombre: "Isquios dinamicos", detalle: "Movilidad", reps: "2x6 cada pierna", circuito: 1, rounds: 2 },
-      { dia: 2, categoria: "Entrada en calor", nombre: "90-90", detalle: "Movilidad", reps: "2x10", circuito: 1, rounds: 2 },
-      { dia: 2, categoria: "Entrada en calor", nombre: "Lunges", detalle: "Dominante de rodilla", reps: "2x5 cada pierna", circuito: 1, rounds: 2 },
-      { dia: 2, categoria: "Entrada en calor", nombre: "R. Swing", detalle: "Core", reps: "2x10", circuito: 1, rounds: 2 },
-      { dia: 2, categoria: "Entrada en calor", nombre: "Row 45 con mancuernas livianas", detalle: "Traccion", reps: "5x5", circuito: 1, rounds: 2 },
-      { dia: 2, categoria: "Fuerza", nombre: "Dead lift", detalle: "Dominante de cadera", reps: "5x5" },
-      { dia: 2, categoria: "Fuerza", nombre: "Hipthrust", detalle: "Dominante de cadera", reps: "5", circuito: 2, rounds: 5 },
-      { dia: 2, categoria: "Fuerza", nombre: "Pull ups", detalle: "Traccion", reps: "7", circuito: 2, rounds: 5 },
-      { dia: 2, categoria: "Fuerza", nombre: "Row Serrucho", detalle: "Traccion", reps: "4x7" },
-      { dia: 2, categoria: "Core", nombre: "Pallof", detalle: "Core", reps: "10'' de cada lado", circuito: 3, rounds: 3 },
-      { dia: 2, categoria: "Core", nombre: "Carry Farmer", detalle: "Core", reps: "20 mts", circuito: 3, rounds: 3 },
-      { dia: 2, categoria: "Core", nombre: "Plank", detalle: "Core", reps: "20''", circuito: 3, rounds: 3 }
-    ]
-  }
-};
+//    Ahora se leen directamente del archivo rutinas.xlsx (una pestaña por
+//    alumno) — no hace falta tocar este archivo para actualizar rutinas.
+//    Ver rutinas.xlsx (pestaña LEEME) para las instrucciones de formato.
+//    "RUTINAS" se completa solo al cargar la app (ver app.js).
+let RUTINAS = {};
 
 // Orden fijo de categorías (no tocar el orden de este array)
 const CATEGORIAS_ORDEN = ["Entrada en calor", "Potencia", "Fuerza", "Core", "Cardio"];
@@ -319,4 +271,16 @@ const EJERCICIOS_RM = [
   "Shoulder Press",
   "Pull Ups",
   "Dead lift"
+];
+
+// 9) Fichas por patrón de movimiento (PDFs). El "archivo" es el nombre
+//    del PDF puesto adentro de la carpeta pwa/fichas/ (subida junto con
+//    el resto de la app).
+const FICHAS = [
+  { patron: "Cadera Dominante", archivo: "fichas/cadera-dominante.pdf" },
+  { patron: "Rodilla Dominante", archivo: "fichas/rodilla-dominante.pdf" },
+  { patron: "Empuje Horizontal", archivo: "fichas/empuje-horizontal.pdf" },
+  { patron: "Empuje Vertical", archivo: "fichas/empuje-vertical.pdf" },
+  { patron: "Tracción", archivo: "fichas/traccion.pdf" },
+  { patron: "Core", archivo: "fichas/core.pdf" }
 ];
