@@ -31,8 +31,37 @@ const ALUMNOS = [
   "Nancy Noguera"
 ];
 
-// 3) Rutina semanal por alumno
-//    Cada ejercicio lleva:
+// 2.1) PIN de 4 dígitos por alumno — se lo pasás vos a cada uno (por
+//      WhatsApp, por ejemplo). Sin el PIN correcto no pueden entrar a
+//      ver la rutina, ni la suya ni la de otro compañero.
+const PINS = {
+  "Sebastián Muratore": "2824",
+  "Ezequiel Fasciolo": "1409",
+  "Barbara Lauriente": "5506",
+  "Germán Muratore": "5012",
+  "Romano Copello": "4657",
+  "Juan Lauriente": "3286",
+  "Josefina Pellejero": "2679",
+  "Juan Ignacio Giancarli": "9935",
+  "Johana Araujo": "2424",
+  "Elio Acevedo": "7912",
+  "Valerio Blois": "1520",
+  "Natalia Sanchez": "1488",
+  "Rocio Duchi": "2535",
+  "Candela Stamadianos": "4582",
+  "Mario Flores": "4811",
+  "Nancy Noguera": "9279"
+};
+
+// 3) Rutinas por alumno, organizadas por SEMANA
+//    Cada alumno tiene un objeto { 1: [...], 2: [...], 3: [...] } donde
+//    la clave es el número de semana. La semana con el número MÁS ALTO
+//    es siempre la "semana actual" que ve el alumno por defecto — las
+//    anteriores quedan guardadas como historial que puede consultar.
+//    Para pasar a una semana nueva: agregá una clave nueva (ej: 4) sin
+//    borrar las anteriores.
+//
+//    Cada ejercicio dentro de una semana lleva:
 //    - "dia": número de día de entrenamiento (1, 2, 3...) — cada alumno
 //      puede tener una cantidad distinta de días (2, 3, 5, los que sean).
 //    - "categoria": SIEMPRE una de estas 5, escrita tal cual
@@ -45,41 +74,44 @@ const ALUMNOS = [
 //      en modalidad circuito. Ejercicios sueltos no llevan esta propiedad.
 //    - "rounds" (opcional, junto con "circuito"): cantidad de vueltas.
 //    reps: string libre ("3x10", "4x8-8-6-6", etc.)
-//    Todavía sin cargar — se completa a medida que el profe pasa las rutinas.
+//    Todavía sin cargar (salvo Sebastián) — se completa a medida que el
+//    profe pasa las rutinas.
 const RUTINAS = {
-  "Sebastián Muratore": [
-    { dia: 1, categoria: "Entrada en calor", nombre: "Dorsiflexion de tobillo", detalle: "Movilidad", reps: "6 cada pierna", circuito: 1, rounds: 2 },
-    { dia: 1, categoria: "Entrada en calor", nombre: "Isquios touch and go", detalle: "Movilidad", reps: "6 cada pierna", circuito: 1, rounds: 2 },
-    { dia: 1, categoria: "Entrada en calor", nombre: "Air Squats", detalle: "Dominante de rodilla", reps: "8", circuito: 1, rounds: 2 },
-    { dia: 1, categoria: "Entrada en calor", nombre: "Push ups", detalle: "Empuje", reps: "7", circuito: 1, rounds: 2 },
-    { dia: 1, categoria: "Entrada en calor", nombre: "Plank", detalle: "Core", reps: "20''", circuito: 1, rounds: 2 },
-    { dia: 1, categoria: "Fuerza", nombre: "Back Squats", detalle: "Dominante de rodilla", reps: "5x5" },
-    { dia: 1, categoria: "Fuerza", nombre: "Bulgarian split Squats", detalle: "Dominante de rodilla", reps: "5x5" },
-    { dia: 1, categoria: "Fuerza", nombre: "Bench Press", detalle: "Empuje", reps: "5x5" },
-    { dia: 1, categoria: "Fuerza", nombre: "Shoulder press", detalle: "Empuje", reps: "5x5" },
-    { dia: 1, categoria: "Fuerza", nombre: "Vuelos laterales", detalle: "Empuje", reps: "4x10" },
-    { dia: 1, categoria: "Core", nombre: "Plank lateral", detalle: "Core", reps: "10'' de cada lado", circuito: 2, rounds: 3 },
-    { dia: 1, categoria: "Core", nombre: "Bug dead", detalle: "Core", reps: "20", circuito: 2, rounds: 3 },
-    { dia: 1, categoria: "Core", nombre: "Roll out", detalle: "Core", reps: "10", circuito: 2, rounds: 3 },
-    { dia: 2, categoria: "Entrada en calor", nombre: "Isquios dinamicos", detalle: "Movilidad", reps: "2x6 cada pierna", circuito: 1, rounds: 2 },
-    { dia: 2, categoria: "Entrada en calor", nombre: "90-90", detalle: "Movilidad", reps: "2x10", circuito: 1, rounds: 2 },
-    { dia: 2, categoria: "Entrada en calor", nombre: "Lunges", detalle: "Dominante de rodilla", reps: "2x5 cada pierna", circuito: 1, rounds: 2 },
-    { dia: 2, categoria: "Entrada en calor", nombre: "R. Swing", detalle: "Core", reps: "2x10", circuito: 1, rounds: 2 },
-    { dia: 2, categoria: "Entrada en calor", nombre: "Row 45 con mancuernas livianas", detalle: "Traccion", reps: "5x5", circuito: 1, rounds: 2 },
-    { dia: 2, categoria: "Fuerza", nombre: "Dead lift", detalle: "Dominante de cadera", reps: "5x5" },
-    { dia: 2, categoria: "Fuerza", nombre: "Hipthrust", detalle: "Dominante de cadera", reps: "5", circuito: 2, rounds: 5 },
-    { dia: 2, categoria: "Fuerza", nombre: "Pull ups", detalle: "Traccion", reps: "7", circuito: 2, rounds: 5 },
-    { dia: 2, categoria: "Fuerza", nombre: "Row Serrucho", detalle: "Traccion", reps: "4x7" },
-    { dia: 2, categoria: "Core", nombre: "Pallof", detalle: "Core", reps: "10'' de cada lado", circuito: 3, rounds: 3 },
-    { dia: 2, categoria: "Core", nombre: "Carry Farmer", detalle: "Core", reps: "20 mts", circuito: 3, rounds: 3 },
-    { dia: 2, categoria: "Core", nombre: "Plank", detalle: "Core", reps: "20''", circuito: 3, rounds: 3 }
-  ]
+  "Sebastián Muratore": {
+    1: [
+      { dia: 1, categoria: "Entrada en calor", nombre: "Dorsiflexion de tobillo", detalle: "Movilidad", reps: "6 cada pierna", circuito: 1, rounds: 2 },
+      { dia: 1, categoria: "Entrada en calor", nombre: "Isquios touch and go", detalle: "Movilidad", reps: "6 cada pierna", circuito: 1, rounds: 2 },
+      { dia: 1, categoria: "Entrada en calor", nombre: "Air Squats", detalle: "Dominante de rodilla", reps: "8", circuito: 1, rounds: 2 },
+      { dia: 1, categoria: "Entrada en calor", nombre: "Push ups", detalle: "Empuje", reps: "7", circuito: 1, rounds: 2 },
+      { dia: 1, categoria: "Entrada en calor", nombre: "Plank", detalle: "Core", reps: "20''", circuito: 1, rounds: 2 },
+      { dia: 1, categoria: "Fuerza", nombre: "Back Squats", detalle: "Dominante de rodilla", reps: "5x5" },
+      { dia: 1, categoria: "Fuerza", nombre: "Bulgarian split Squats", detalle: "Dominante de rodilla", reps: "5x5" },
+      { dia: 1, categoria: "Fuerza", nombre: "Bench Press", detalle: "Empuje", reps: "5x5" },
+      { dia: 1, categoria: "Fuerza", nombre: "Shoulder press", detalle: "Empuje", reps: "5x5" },
+      { dia: 1, categoria: "Fuerza", nombre: "Vuelos laterales", detalle: "Empuje", reps: "4x10" },
+      { dia: 1, categoria: "Core", nombre: "Plank lateral", detalle: "Core", reps: "10'' de cada lado", circuito: 2, rounds: 3 },
+      { dia: 1, categoria: "Core", nombre: "Bug dead", detalle: "Core", reps: "20", circuito: 2, rounds: 3 },
+      { dia: 1, categoria: "Core", nombre: "Roll out", detalle: "Core", reps: "10", circuito: 2, rounds: 3 },
+      { dia: 2, categoria: "Entrada en calor", nombre: "Isquios dinamicos", detalle: "Movilidad", reps: "2x6 cada pierna", circuito: 1, rounds: 2 },
+      { dia: 2, categoria: "Entrada en calor", nombre: "90-90", detalle: "Movilidad", reps: "2x10", circuito: 1, rounds: 2 },
+      { dia: 2, categoria: "Entrada en calor", nombre: "Lunges", detalle: "Dominante de rodilla", reps: "2x5 cada pierna", circuito: 1, rounds: 2 },
+      { dia: 2, categoria: "Entrada en calor", nombre: "R. Swing", detalle: "Core", reps: "2x10", circuito: 1, rounds: 2 },
+      { dia: 2, categoria: "Entrada en calor", nombre: "Row 45 con mancuernas livianas", detalle: "Traccion", reps: "5x5", circuito: 1, rounds: 2 },
+      { dia: 2, categoria: "Fuerza", nombre: "Dead lift", detalle: "Dominante de cadera", reps: "5x5" },
+      { dia: 2, categoria: "Fuerza", nombre: "Hipthrust", detalle: "Dominante de cadera", reps: "5", circuito: 2, rounds: 5 },
+      { dia: 2, categoria: "Fuerza", nombre: "Pull ups", detalle: "Traccion", reps: "7", circuito: 2, rounds: 5 },
+      { dia: 2, categoria: "Fuerza", nombre: "Row Serrucho", detalle: "Traccion", reps: "4x7" },
+      { dia: 2, categoria: "Core", nombre: "Pallof", detalle: "Core", reps: "10'' de cada lado", circuito: 3, rounds: 3 },
+      { dia: 2, categoria: "Core", nombre: "Carry Farmer", detalle: "Core", reps: "20 mts", circuito: 3, rounds: 3 },
+      { dia: 2, categoria: "Core", nombre: "Plank", detalle: "Core", reps: "20''", circuito: 3, rounds: 3 }
+    ]
+  }
 };
 
 // Orden fijo de categorías (no tocar el orden de este array)
 const CATEGORIAS_ORDEN = ["Entrada en calor", "Potencia", "Fuerza", "Core", "Cardio"];
 // Alumnos sin rutina cargada todavía usan este mensaje:
-const RUTINA_DEFAULT = [];
+const RUTINA_DEFAULT = {};
 
 // 4) Tests físicos: historial por alumno y por tipo de test
 //    Cada entrada: { fecha: "YYYY-MM-DD", valor: número }

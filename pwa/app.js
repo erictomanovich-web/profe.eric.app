@@ -8,27 +8,58 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 let alumnoActual = localStorage.getItem("alumnoActual") || null;
 
-/* ---------- Selector de alumno ---------- */
+/* ---------- Selector de alumno + PIN ---------- */
 function initSelectorAlumno(){
   const overlay = $("#selectorOverlay");
+  const pasoNombre = $("#pasoNombre");
+  const pasoPin = $("#pasoPin");
   const list = $("#alumnoList");
   list.innerHTML = "";
+
+  let alumnoPendiente = null;
+
+  function mostrarPasoPin(nombre){
+    alumnoPendiente = nombre;
+    $("#pinTitulo").textContent = `Hola, ${nombre.split(" ")[0]}`;
+    $("#pinInput").value = "";
+    $("#pinError").textContent = "";
+    pasoNombre.style.display = "none";
+    pasoPin.style.display = "block";
+    $("#pinInput").focus();
+  }
+
   ALUMNOS.forEach(nombre => {
     const b = document.createElement("button");
     b.className = "alumno-opt";
     b.textContent = nombre;
-    b.onclick = () => {
-      alumnoActual = nombre;
-      localStorage.setItem("alumnoActual", nombre);
+    b.onclick = () => mostrarPasoPin(nombre);
+    list.appendChild(b);
+  });
+
+  function intentarEntrar(){
+    const pin = $("#pinInput").value.trim();
+    if (pin === (PINS[alumnoPendiente] || "")){
+      alumnoActual = alumnoPendiente;
+      localStorage.setItem("alumnoActual", alumnoPendiente);
       overlay.style.display = "none";
       renderAll();
-    };
-    list.appendChild(b);
+    } else {
+      $("#pinError").textContent = "PIN incorrecto. Probá de nuevo.";
+      $("#pinInput").value = "";
+      $("#pinInput").focus();
+    }
+  }
+  $("#pinConfirmar").addEventListener("click", intentarEntrar);
+  $("#pinInput").addEventListener("keydown", (e) => { if (e.key === "Enter") intentarEntrar(); });
+  $("#pinVolver").addEventListener("click", () => {
+    pasoPin.style.display = "none";
+    pasoNombre.style.display = "block";
   });
 
   if (alumnoActual && ALUMNOS.includes(alumnoActual)) {
     overlay.style.display = "none";
   } else {
+    alumnoActual = null;
     overlay.style.display = "flex";
   }
 }
@@ -54,48 +85,36 @@ $("#sobreLink").addEventListener("click", () => goTo("sobre"));
 $("#faqLink").addEventListener("click", () => goTo("faq"));
 $$("[data-back]").forEach(a => a.addEventListener("click", (e) => { e.preventDefault(); goTo("inicio"); }));
 
-/* ---------- Chip de alumno + Inicio ---------- */
-function renderInicio(){
-  $("#alumnoChip").style.display = "inline-flex";
-  $("#alumnoNombre").textContent = alumnoActual;
-
-  const rutina = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
-  const dias = diasDisponibles();
-  const completados = getDiasCompletados();
-  const totalSemanas = getHistorialSemanas().length;
-  $("#resumenHoy").innerHTML = rutina.length
-    ? `<div class="ejercicio"><div><div class="nombre">${completados.length}/${dias.length} días completados esta semana</div>
-        <div class="detalle">Tocá "Mi Plan" para ver el detalle y marcar tu progreso</div></div></div>
-       <div class="ejercicio"><div><div class="nombre">${totalSemanas} semana${totalSemanas === 1 ? "" : "s"} completa${totalSemanas === 1 ? "" : "s"} en total</div>
-        <div class="detalle">Se suma cada vez que terminás todos los días de una semana</div></div></div>`
-    : `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
-
-  const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
-  $("#resumenRpe").innerHTML = pend.length
-    ? `<div class="detalle">Tenés ${pend.length} registro(s) de RPE sin enviar (se reintentará solo cuando tengas señal).</div>`
-    : `<div class="detalle">Todo tus registros de RPE están al día.</div>`;
-}
-
 /* ---------- Semana / progreso ---------- */
-function getWeekKey(date = new Date()){
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${weekNo}`;
+function getSemanasDisponibles(){
+  const rutinaAlumno = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
+  return Object.keys(rutinaAlumno).map(Number).sort((a,b) => a-b);
 }
 
-function diasDisponibles(){
-  const rutina = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
-  const dias = [...new Set(rutina.map(ej => ej.dia))];
+// La semana con el número más alto cargada por el profe es la "actual"
+function getSemanaActual(){
+  const semanas = getSemanasDisponibles();
+  return semanas.length ? semanas[semanas.length - 1] : null;
+}
+
+function rutinaDeSemana(semana){
+  const rutinaAlumno = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
+  return rutinaAlumno[semana] || [];
+}
+
+let semanaSeleccionada = null;
+let diaSeleccionado = null;
+
+function diasDisponibles(semana){
+  const dias = [...new Set(rutinaDeSemana(semana).map(ej => ej.dia))];
   return dias.sort((a,b) => a-b);
 }
 
-function diasCompletadosKey(){
-  return `dias_ok_${alumnoActual}_${getWeekKey()}`;
+function diasCompletadosKey(semana){
+  return `dias_ok_${alumnoActual}_sem${semana}`;
 }
-function getDiasCompletados(){
-  return JSON.parse(localStorage.getItem(diasCompletadosKey()) || "[]");
+function getDiasCompletados(semana){
+  return JSON.parse(localStorage.getItem(diasCompletadosKey(semana)) || "[]");
 }
 
 // Historial acumulado de semanas 100% completadas (no se resetea nunca)
@@ -105,45 +124,87 @@ function historialSemanasKey(){
 function getHistorialSemanas(){
   return JSON.parse(localStorage.getItem(historialSemanasKey()) || "[]");
 }
-function actualizarHistorialSemana(){
-  const dias = diasDisponibles();
-  const completados = getDiasCompletados();
+function actualizarHistorialSemana(semana){
+  const dias = diasDisponibles(semana);
+  const completados = getDiasCompletados(semana);
   const semanaCompleta = dias.length > 0 && dias.every(d => completados.includes(d));
   let historial = getHistorialSemanas();
-  const wk = getWeekKey();
-  if (semanaCompleta && !historial.includes(wk)){
-    historial.push(wk);
+  if (semanaCompleta && !historial.includes(semana)){
+    historial.push(semana);
     localStorage.setItem(historialSemanasKey(), JSON.stringify(historial));
-  } else if (!semanaCompleta && historial.includes(wk)){
-    historial = historial.filter(w => w !== wk);
+  } else if (!semanaCompleta && historial.includes(semana)){
+    historial = historial.filter(s => s !== semana);
     localStorage.setItem(historialSemanasKey(), JSON.stringify(historial));
   }
 }
 
-function checklistKey(dia){
-  return `check_${alumnoActual}_${getWeekKey()}_dia${dia}`;
+function checklistKey(semana, dia){
+  return `check_${alumnoActual}_sem${semana}_dia${dia}`;
 }
 
-let diaSeleccionado = null;
+/* ---------- Chip de alumno + Inicio ---------- */
+function renderInicio(){
+  $("#alumnoChip").style.display = "inline-flex";
+  $("#alumnoNombre").textContent = alumnoActual;
 
-/* ---------- Mi Plan (tabs de día + rutina + checklist) ---------- */
+  const semanaActual = getSemanaActual();
+  const totalSemanas = getHistorialSemanas().length;
+
+  if (semanaActual === null){
+    $("#resumenHoy").innerHTML = `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
+  } else {
+    const dias = diasDisponibles(semanaActual);
+    const completados = getDiasCompletados(semanaActual);
+    $("#resumenHoy").innerHTML = `
+       <div class="ejercicio"><div><div class="nombre">Semana ${semanaActual} — ${completados.length}/${dias.length} días completados</div>
+        <div class="detalle">Tocá "Mi Plan" para ver el detalle y marcar tu progreso</div></div></div>
+       <div class="ejercicio"><div><div class="nombre">${totalSemanas} semana${totalSemanas === 1 ? "" : "s"} completa${totalSemanas === 1 ? "" : "s"} en total</div>
+        <div class="detalle">Se suma cada vez que terminás todos los días de una semana</div></div></div>`;
+  }
+
+  const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
+  $("#resumenRpe").innerHTML = pend.length
+    ? `<div class="detalle">Tenés ${pend.length} registro(s) de RPE sin enviar (se reintentará solo cuando tengas señal).</div>`
+    : `<div class="detalle">Todo tus registros de RPE están al día.</div>`;
+}
+
+/* ---------- Mi Plan (selector de semana + tabs de día + rutina) ---------- */
 function renderPlan(){
-  const rutina = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
+  const semanas = getSemanasDisponibles();
   const cont = $("#listaEjercicios");
   const tabsCont = $("#diaTabs");
+  const semanaSelect = $("#semanaSelect");
   const btn = $("#terminarDiaBtn");
   const status = $("#diaStatus");
   status.textContent = "";
 
-  if (!rutina.length){
+  if (!semanas.length){
+    semanaSelect.innerHTML = "";
+    semanaSelect.style.display = "none";
     tabsCont.innerHTML = "";
     btn.style.display = "none";
     cont.innerHTML = `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
     return;
   }
 
-  const dias = diasDisponibles();
-  const completados = getDiasCompletados();
+  const semanaActual = getSemanaActual();
+  if (semanaSeleccionada === null || !semanas.includes(semanaSeleccionada)){
+    semanaSeleccionada = semanaActual;
+  }
+
+  // Selector de semana (la más alta = actual, el resto queda como historial)
+  semanaSelect.style.display = "block";
+  semanaSelect.innerHTML = semanas.map(s =>
+    `<option value="${s}" ${s === semanaSeleccionada ? "selected" : ""}>Semana ${s}${s === semanaActual ? " (actual)" : ""}</option>`
+  ).join("");
+  semanaSelect.onchange = () => {
+    semanaSeleccionada = Number(semanaSelect.value);
+    diaSeleccionado = null;
+    renderPlan();
+  };
+
+  const dias = diasDisponibles(semanaSeleccionada);
+  const completados = getDiasCompletados(semanaSeleccionada);
 
   if (diaSeleccionado === null || !dias.includes(diaSeleccionado)){
     diaSeleccionado = dias.find(d => !completados.includes(d)) ?? dias[0];
@@ -160,9 +221,9 @@ function renderPlan(){
   });
 
   // Ejercicios del día, agrupados por categoría en orden fijo
-  const doneKey = checklistKey(diaSeleccionado);
+  const doneKey = checklistKey(semanaSeleccionada, diaSeleccionado);
   let done = JSON.parse(localStorage.getItem(doneKey) || "[]");
-  const rutinaConIndice = rutina.map((ej, i) => ({ ...ej, _i: i }));
+  const rutinaConIndice = rutinaDeSemana(semanaSeleccionada).map((ej, i) => ({ ...ej, _i: i }));
 
   cont.innerHTML = "";
   CATEGORIAS_ORDEN.forEach(categoria => {
@@ -226,11 +287,11 @@ function renderPlan(){
   const yaCompletado = completados.includes(diaSeleccionado);
   btn.textContent = yaCompletado ? "Deshacer (marcar como no terminada)" : "Marcar rutina de hoy como terminada";
   btn.onclick = () => {
-    let comp = getDiasCompletados();
+    let comp = getDiasCompletados(semanaSeleccionada);
     if (comp.includes(diaSeleccionado)) comp = comp.filter(d => d !== diaSeleccionado);
     else comp.push(diaSeleccionado);
-    localStorage.setItem(diasCompletadosKey(), JSON.stringify(comp));
-    actualizarHistorialSemana();
+    localStorage.setItem(diasCompletadosKey(semanaSeleccionada), JSON.stringify(comp));
+    actualizarHistorialSemana(semanaSeleccionada);
     if (!yaCompletado){
       const siguiente = dias.find(d => !comp.includes(d) && d !== diaSeleccionado);
       if (siguiente) diaSeleccionado = siguiente;

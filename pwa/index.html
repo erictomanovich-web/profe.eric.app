@@ -248,10 +248,22 @@
 <body>
 
 <div class="selector-overlay" id="selectorOverlay">
-  <div class="eyebrow">Bienvenido</div>
-  <h2>¿Quién sos?</h2>
-  <p>Elegí tu nombre para ver tu plan.</p>
-  <div class="alumno-list" id="alumnoList"></div>
+  <div id="pasoNombre">
+    <div class="eyebrow">Bienvenido</div>
+    <h2>¿Quién sos?</h2>
+    <p>Elegí tu nombre para ver tu plan.</p>
+    <div class="alumno-list" id="alumnoList"></div>
+  </div>
+  <div id="pasoPin" style="display:none;">
+    <div class="eyebrow">Un paso más</div>
+    <h2 id="pinTitulo">Ingresá tu PIN</h2>
+    <p>Tu profe te pasó un código de 4 dígitos.</p>
+    <input type="tel" inputmode="numeric" maxlength="4" id="pinInput" placeholder="••••"
+      style="font-size:28px; letter-spacing:.4em; text-align:center; padding:16px;">
+    <div class="status-msg err" id="pinError" style="min-height:18px;"></div>
+    <button class="btn" id="pinConfirmar">Entrar</button>
+    <button class="btn secondary" id="pinVolver">← Elegir otro nombre</button>
+  </div>
 </div>
 
 <header>
@@ -288,6 +300,7 @@
   <section class="view" id="view-plan">
     <div class="card">
       <h3 id="planTitulo">Rutina de la semana</h3>
+      <select id="semanaSelect" style="margin-bottom:10px;"></select>
       <div class="dia-tabs" id="diaTabs"></div>
       <div id="listaEjercicios"></div>
       <button class="btn" id="terminarDiaBtn">Marcar rutina de hoy como terminada</button>
