@@ -13,6 +13,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTtAJs1MDOMoce
 
 // 2) Lista de alumnos
 const ALUMNOS = [
+  "Eric Tomanovich",
   "Sebastián Muratore",
   "Ezequiel Fasciolo",
   "Barbara Lauriente",
@@ -23,7 +24,7 @@ const ALUMNOS = [
   "Juan Ignacio Giancarli",
   "Johana Araujo",
   "Elio Acevedo",
-  "Valerio Blois",
+  "Valeria Blois",
   "Natalia Sanchez",
   "Rocio Duchi",
   "Candela Stamadianos",
@@ -35,6 +36,7 @@ const ALUMNOS = [
 //      WhatsApp, por ejemplo). Sin el PIN correcto no pueden entrar a
 //      ver la rutina, ni la suya ni la de otro compañero.
 const PINS = {
+  "Eric Tomanovich": "0001",
   "Sebastián Muratore": "2824",
   "Ezequiel Fasciolo": "1409",
   "Barbara Lauriente": "5506",
@@ -45,7 +47,7 @@ const PINS = {
   "Juan Ignacio Giancarli": "9935",
   "Johana Araujo": "2424",
   "Elio Acevedo": "7912",
-  "Valerio Blois": "1520",
+  "Valeria Blois": "1520",
   "Natalia Sanchez": "1488",
   "Rocio Duchi": "2535",
   "Candela Stamadianos": "4582",
