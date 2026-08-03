@@ -8,6 +8,13 @@ const $$ = (sel) => document.querySelectorAll(sel);
 
 let alumnoActual = localStorage.getItem("alumnoActual") || null;
 
+function abrirSelectorParaCambiar(){
+  $("#pasoPin").style.display = "none";
+  $("#pasoNombre").style.display = "block";
+  $("#cancelarCambio").style.display = "block";
+  $("#selectorOverlay").style.display = "flex";
+}
+
 /* ---------- Selector de alumno + PIN ---------- */
 function initSelectorAlumno(){
   const overlay = $("#selectorOverlay");
@@ -55,6 +62,9 @@ function initSelectorAlumno(){
     pasoPin.style.display = "none";
     pasoNombre.style.display = "block";
   });
+  $("#cancelarCambio").addEventListener("click", () => {
+    overlay.style.display = "none";
+  });
 
   if (alumnoActual && ALUMNOS.includes(alumnoActual)) {
     overlay.style.display = "none";
@@ -84,6 +94,7 @@ function goTo(view){
 $$("nav.tabbar button").forEach(b => b.addEventListener("click", () => goTo(b.dataset.view)));
 $("#sobreLink").addEventListener("click", () => goTo("sobre"));
 $("#faqLink").addEventListener("click", () => goTo("faq"));
+$("#alumnoChip").addEventListener("click", abrirSelectorParaCambiar);
 $$("[data-back]").forEach(a => a.addEventListener("click", (e) => { e.preventDefault(); goTo("inicio"); }));
 
 /* ---------- Semana / progreso ---------- */

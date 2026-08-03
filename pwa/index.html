@@ -277,6 +277,7 @@
     <h2>¿Quién sos?</h2>
     <p>Elegí tu nombre para ver tu plan.</p>
     <div class="alumno-list" id="alumnoList"></div>
+    <button class="btn secondary" id="cancelarCambio" style="display:none;">Cancelar</button>
   </div>
   <div id="pasoPin" style="display:none;">
     <div class="eyebrow">Un paso más</div>
@@ -293,8 +294,9 @@
 <header>
   <div class="eyebrow">Profe.Eric</div>
   <h1 id="tituloVista">Inicio</h1>
-  <div class="alumno-chip" id="alumnoChip" style="display:none;">
+  <div class="alumno-chip" id="alumnoChip" style="display:none; cursor:pointer;" title="Tocá para cambiar de alumno">
     <span>Alumno:</span><b id="alumnoNombre"></b>
+    <span style="margin-left:4px; color:var(--text-dim);">⇄</span>
   </div>
 </header>
 
