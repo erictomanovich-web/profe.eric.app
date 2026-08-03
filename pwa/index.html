@@ -132,10 +132,11 @@
   .selector-overlay{
     position:fixed; inset:0; background:var(--bg); z-index:100;
     display:flex; flex-direction:column; padding:24px; padding-top:calc(48px + env(safe-area-inset-top));
+    overflow-y:auto;
   }
   .selector-overlay h2{font-size:24px; text-transform:uppercase; margin-bottom:4px;}
   .selector-overlay p{color:var(--text-dim); font-size:14px; margin:0 0 20px;}
-  .alumno-list{overflow-y:auto; flex:1;}
+  .alumno-list{}
   .alumno-opt{
     display:block; width:100%; text-align:left; background:var(--surface);
     border:1px solid var(--line); color:var(--text); padding:14px 16px;
