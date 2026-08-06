@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validador de rutinas — Profe.Eric</title>
+<style>
+  :root{
+    --bg:#18181A; --surface:#232326; --surface-2:#2C2C30; --line:#3A3A3E;
+    --text:#F3F1EB; --text-dim:#9A9A94; --track:#C1440E; --mustard:#D8B93B;
+    --ok:#5FAE6E; --warn:#D8B93B; --err:#C1440E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:20px; max-width:800px; margin:0 auto;
+  }
+  h1{font-size:20px; text-transform:uppercase; letter-spacing:.03em; margin:8px 0 2px;}
+  .sub{color:var(--text-dim); font-size:13px; margin-bottom:20px;}
+  .resumen{
+    display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .resumen .chip{
+    background:var(--surface); border:1px solid var(--line); border-radius:999px;
+    padding:8px 14px; font-size:13px;
+  }
+  .resumen .chip b{font-size:16px;}
+  .chip.ok b{color:var(--ok);} .chip.warn b{color:var(--warn);} .chip.err b{color:var(--err);}
+  .alumno-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:14px 16px; margin-bottom:10px;
+  }
+  .alumno-card.sin-datos{opacity:.55;}
+  .alumno-header{
+    display:flex; justify-content:space-between; align-items:center; cursor:pointer;
+  }
+  .alumno-nombre{font-weight:700; font-size:15px;}
+  .alumno-estado{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;}
+  .alumno-estado.ok{color:var(--ok);}
+  .alumno-estado.warn{color:var(--warn);}
+  .alumno-estado.err{color:var(--err);}
+  .alumno-detalle{display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:13px;}
+  .alumno-card.open .alumno-detalle{display:block;}
+  .linea{padding:3px 0; color:var(--text-dim);}
+  .linea.warn{color:var(--warn);}
+  .linea.err{color:var(--err);}
+  .semana-badge{
+    display:inline-block; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:6px; padding:2px 8px; margin:2px 4px 2px 0; font-size:12px;
+  }
+  #estadoCarga{color:var(--text-dim); font-size:13px;}
+  a{color:var(--mustard);}
+</style>
+</head>
+<body>
+
+<h1>Validador de rutinas</h1>
+<div class="sub">Lee <code>rutinas.xlsx</code> igual que la app, y te muestra qué se cargó bien y dónde hay algo raro. Esta página es solo para vos — no la compartas con alumnos.</div>
+<div id="estadoCarga">Cargando rutinas.xlsx...</div>
+<div class="resumen" id="resumen" style="display:none;"></div>
+<div id="listado"></div>
+
+<script src="xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+
+async function validar(){
+  let wb;
+  try{
+    const resp = await fetch("rutinas.xlsx");
+    const buf = await resp.arrayBuffer();
+    wb = XLSX.read(buf, { type: "array" });
+  }catch(e){
+    $("#estadoCarga").textContent = "No se pudo leer rutinas.xlsx: " + e.message;
+    return;
+  }
+
+  const resultados = ALUMNOS.map(nombre => analizarAlumno(nombre, wb));
+
+  const ok = resultados.filter(r => r.estado === "ok").length;
+  const warn = resultados.filter(r => r.estado === "warn").length;
+  const err = resultados.filter(r => r.estado === "err").length;
+
+  $("#estadoCarga").style.display = "none";
+  $("#resumen").style.display = "flex";
+  $("#resumen").innerHTML = `
+    <div class="chip ok">Sin problemas: <b>${ok}</b></div>
+    <div class="chip warn">Con avisos: <b>${warn}</b></div>
+    <div class="chip err">Sin pestaña / sin datos: <b>${err}</b></div>
+  `;
+
+  $("#listado").innerHTML = resultados.map((r, i) => `
+    <div class="alumno-card ${r.estado === 'err' ? 'sin-datos' : ''}" id="card-${i}">
+      <div class="alumno-header" onclick="document.getElementById('card-${i}').classList.toggle('open')">
+        <div class="alumno-nombre">${r.nombre}</div>
+        <div class="alumno-estado ${r.estado}">${r.estadoTexto}</div>
+      </div>
+      <div class="alumno-detalle">${r.detalleHtml}</div>
+    </div>
+  `).join("");
+}
+
+function analizarAlumno(nombre, wb){
+  const sheet = wb.Sheets[nombre];
+  if (!sheet){
+    return {
+      nombre, estado: "err", estadoTexto: "Sin pestaña",
+      detalleHtml: `<div class="linea err">No existe ninguna pestaña llamada exactamente "${nombre}" en rutinas.xlsx. Revisá que el nombre de la pestaña coincida letra por letra (mayúsculas, tildes, espacios).</div>`
+    };
+  }
+
+  const filas = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  const avisos = [];
+  const porSemana = {};
+
+  filas.forEach((f, i) => {
+    const filaNum = i + 2; // +2 porque la fila 1 es el encabezado
+    const semanaRaw = f["Semana"];
+    const diaRaw = f["Día"] || f["Dia"];
+    const categoria = String(f["Categoría"] || f["Categoria"] || "").trim();
+    const ejercicio = String(f["Ejercicio"] || "").trim();
+    const circuito = f["Circuito"];
+    const rounds = f["Rounds"];
+
+    const filaVacia = !semanaRaw && !diaRaw && !categoria && !ejercicio;
+    if (filaVacia) return;
+
+    const semana = Number(semanaRaw);
+    const dia = Number(diaRaw);
+
+    if (!ejercicio){
+      avisos.push(`Fila ${filaNum}: tiene datos pero le falta el nombre del Ejercicio — esta fila no se va a mostrar en la app.`);
+      return;
+    }
+    if (!semanaRaw || isNaN(semana)){
+      avisos.push(`Fila ${filaNum} ("${ejercicio}"): la columna Semana está vacía o no es un número — esta fila no se va a mostrar.`);
+      return;
+    }
+    if (!diaRaw || isNaN(dia)){
+      avisos.push(`Fila ${filaNum} ("${ejercicio}"): la columna Día está vacía o no es un número — esta fila no se va a mostrar.`);
+      return;
+    }
+    if (categoria && !CATEGORIAS_ORDEN.includes(categoria)){
+      avisos.push(`Fila ${filaNum} ("${ejercicio}"): la categoría "${categoria}" no coincide exactamente con ninguna de las 5 válidas — revisá mayúsculas/tildes.`);
+    }
+    if (!categoria){
+      avisos.push(`Fila ${filaNum} ("${ejercicio}"): no tiene Categoría cargada.`);
+    }
+    const tieneCircuito = circuito !== "" && circuito !== undefined && circuito !== null;
+    const tieneRounds = rounds !== "" && rounds !== undefined && rounds !== null;
+    if (tieneCircuito && !tieneRounds){
+      avisos.push(`Fila ${filaNum} ("${ejercicio}"): tiene Circuito pero le falta Rounds.`);
+    }
+    if (!tieneCircuito && tieneRounds){
+      avisos.push(`Fila ${filaNum} ("${ejercicio}"): tiene Rounds pero le falta el número de Circuito.`);
+    }
+
+    if (!porSemana[semana]) porSemana[semana] = {};
+    if (!porSemana[semana][dia]) porSemana[semana][dia] = 0;
+    porSemana[semana][dia]++;
+  });
+
+  const semanas = Object.keys(porSemana).map(Number).sort((a,b) => a-b);
+
+  if (!semanas.length){
+    return {
+      nombre, estado: "err", estadoTexto: "Sin datos",
+      detalleHtml: `<div class="linea err">La pestaña existe pero no tiene ninguna fila válida cargada todavía.</div>`
+    };
+  }
+
+  const resumenSemanas = semanas.map(s => {
+    const dias = Object.keys(porSemana[s]).map(Number).sort((a,b)=>a-b);
+    const totalEj = Object.values(porSemana[s]).reduce((a,b)=>a+b,0);
+    return `<span class="semana-badge">Semana ${s}: ${dias.length} día${dias.length===1?'':'s'}, ${totalEj} ejercicios</span>`;
+  }).join(" ");
+
+  const estado = avisos.length ? "warn" : "ok";
+  const estadoTexto = avisos.length ? `${avisos.length} aviso${avisos.length===1?'':'s'}` : "Todo OK";
+
+  const detalleHtml = `
+    <div style="margin-bottom:8px;">${resumenSemanas}</div>
+    ${avisos.length
+      ? avisos.map(a => `<div class="linea warn">⚠ ${a}</div>`).join("")
+      : `<div class="linea">Sin avisos — todas las filas cargadas se van a mostrar en la app.</div>`}
+  `;
+
+  return { nombre, estado, estadoTexto, detalleHtml };
+}
+
+validar();
+</script>
+</body>
+</html>

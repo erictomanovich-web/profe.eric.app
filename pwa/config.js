@@ -13,6 +13,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTtAJs1MDOMoce
 
 // 2) Lista de alumnos
 const ALUMNOS = [
+  "Demo (probar la app)",
   "Eric Tomanovich",
   "Sebastián Muratore",
   "Ezequiel Fasciolo",
@@ -36,6 +37,7 @@ const ALUMNOS = [
 //      WhatsApp, por ejemplo). Sin el PIN correcto no pueden entrar a
 //      ver la rutina, ni la suya ni la de otro compañero.
 const PINS = {
+  "Demo (probar la app)": "0000",
   "Eric Tomanovich": "0001",
   "Sebastián Muratore": "2824",
   "Ezequiel Fasciolo": "1409",
@@ -71,6 +73,13 @@ const RUTINA_DEFAULT = {};
 //    Cada entrada: { fecha: "YYYY-MM-DD", valor: número }
 //    Todavía sin cargar — se completa a medida que el profe pasa los tests.
 const TESTS = {
+  "Demo (probar la app)": {
+    "Salto CMJ (cm)": [
+      { fecha: "2026-06-01", valor: 34 },
+      { fecha: "2026-07-01", valor: 37 },
+      { fecha: "2026-08-01", valor: 39 }
+    ]
+  }
 };
 
 // 5) Video-biblioteca (compartida para todos los alumnos)
