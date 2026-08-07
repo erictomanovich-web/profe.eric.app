@@ -349,8 +349,8 @@ function dibujarTest(nombreTest){
       datasets: [{
         label: nombreTest,
         data: datos.map(d => d.valor),
-        borderColor: "#C1440E",
-        backgroundColor: "rgba(193,68,14,0.15)",
+        borderColor: "#FF5E23",
+        backgroundColor: "rgba(255,94,35,0.15)",
         tension: 0.25,
         fill: true,
         pointRadius: 4,
@@ -415,8 +415,8 @@ function renderRpeHistorial(){
       datasets: [{
         label: "RPE",
         data: hist.map(h => h.rpe),
-        borderColor: "#C1440E",
-        backgroundColor: "rgba(193,68,14,0.15)",
+        borderColor: "#FF5E23",
+        backgroundColor: "rgba(255,94,35,0.15)",
         tension: 0.25,
         fill: true,
         pointRadius: 4,
