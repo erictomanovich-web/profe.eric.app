@@ -1,765 +1,516 @@
-/* ============================================================
-   APP.JS — lógica de la app. No hace falta tocar esto para
-   cargar rutinas/tests nuevos: eso se edita en config.js.
-   ============================================================ */
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B1B1D">
+<title>Profe.Eric</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#18181A;
+    --surface:#232326;
+    --surface-2:#2C2C30;
+    --line:#3A3A3E;
+    --text:#F3F1EB;
+    --text-dim:#9A9A94;
+    --track:#C1440E;
+    --track-dim:#7A2C0A;
+    --track-bright:#FF5E23;
+    --track-grad:linear-gradient(135deg, var(--track-bright) 0%, var(--track) 65%, var(--track-dim) 100%);
+    --chalk:#4C8AA6;
+    --mustard:#D8B93B;
+    --lane-grad:linear-gradient(90deg, var(--track) 0%, var(--mustard) 50%, var(--chalk) 100%);
+    --glow-track:0 6px 18px -4px rgba(255,94,35,.45);
+    --radius:14px;
+    --display:'Oswald',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --stat:'Bebas Neue',var(--display);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior:none;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+  h1,h2,h3{margin:0; font-weight:700; letter-spacing:.02em; font-family:var(--display);}
+  .num{font-family:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",monospace;}
 
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
+  /* Header */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 9px),
+      var(--bg);
+    padding:calc(18px + env(safe-area-inset-top)) 20px 14px;
+    border-bottom:none;
+  }
+  header::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:3px;
+    background:var(--lane-grad);
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center;
+    font-family:var(--display); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:#fff; font-weight:600; margin-bottom:6px;
+    background:var(--track-grad); padding:4px 10px 3px;
+    box-shadow:var(--glow-track);
+    clip-path:polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
+  }
+  header h1{font-family:var(--display); font-weight:700; font-size:23px; text-transform:uppercase; letter-spacing:.03em;}
+  .alumno-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:8px; padding:5px 10px; border-radius:999px;
+    background:var(--surface); font-size:12px; color:var(--text-dim);
+    border:1px solid var(--line);
+  }
+  .alumno-chip b{color:var(--text); font-weight:700;}
 
-let alumnoActual = localStorage.getItem("alumnoActual") || null;
+  main{padding:16px; max-width:640px; margin:0 auto;}
+  .view{display:none; animation:fade .2s ease;}
+  .view.active{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
 
-function abrirSelectorParaCambiar(){
-  $("#pasoPin").style.display = "none";
-  $("#pasoNombre").style.display = "block";
-  $("#cancelarCambio").style.display = "block";
-  $("#selectorOverlay").style.display = "flex";
-}
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px; margin-bottom:12px;
+  }
+  .card h3{font-family:var(--display); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin-bottom:10px;}
 
-/* ---------- Selector de alumno + PIN ---------- */
-function initSelectorAlumno(){
-  const overlay = $("#selectorOverlay");
-  const pasoNombre = $("#pasoNombre");
-  const pasoPin = $("#pasoPin");
-  const list = $("#alumnoList");
-  list.innerHTML = "";
-
-  let alumnoPendiente = null;
-
-  function mostrarPasoPin(nombre){
-    alumnoPendiente = nombre;
-    $("#pinTitulo").textContent = `Hola, ${nombre.split(" ")[0]}`;
-    $("#pinInput").value = "";
-    $("#pinError").textContent = "";
-    pasoNombre.style.display = "none";
-    pasoPin.style.display = "block";
-    $("#pinInput").focus();
+  /* Bottom nav */
+  nav.tabbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    display:flex; background:var(--surface);
+    border-top:none; box-shadow:0 -1px 0 0 var(--line);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav.tabbar::before{
+    content:""; display:block; position:absolute; top:-2px; left:0; right:0; height:2px;
+    background:var(--lane-grad); opacity:.55;
+  }
+  nav.tabbar button{
+    position:relative;
+    flex:1; background:none; border:none; color:var(--text-dim);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:10px 2px 8px; font-size:10px; letter-spacing:.02em;
+    font-family:var(--display); font-weight:600; text-transform:uppercase;
+    transition:transform .12s ease;
+  }
+  nav.tabbar button:active{transform:scale(.92);}
+  nav.tabbar button svg{width:20px; height:20px; stroke:var(--text-dim); fill:none; stroke-width:1.8; transition:stroke .15s ease;}
+  nav.tabbar button.active{color:var(--track-bright);}
+  nav.tabbar button.active svg{stroke:var(--track-bright);}
+  nav.tabbar button.active::before{
+    content:""; position:absolute; top:-1px; left:28%; right:28%; height:2px;
+    border-radius:2px; background:var(--track-grad);
   }
 
-  ALUMNOS.forEach(nombre => {
-    const b = document.createElement("button");
-    b.className = "alumno-opt";
-    b.textContent = nombre;
-    b.onclick = () => mostrarPasoPin(nombre);
-    list.appendChild(b);
-  });
-
-  function intentarEntrar(){
-    const pin = $("#pinInput").value.trim();
-    if (pin === (PINS[alumnoPendiente] || "")){
-      alumnoActual = alumnoPendiente;
-      localStorage.setItem("alumnoActual", alumnoPendiente);
-      overlay.style.display = "none";
-      renderAll();
-    } else {
-      $("#pinError").textContent = "PIN incorrecto. Probá de nuevo.";
-      $("#pinInput").value = "";
-      $("#pinInput").focus();
-    }
+  /* Rutina */
+  .circuito-box{
+    background:var(--surface-2); border:1px dashed var(--mustard);
+    border-radius:10px; padding:4px 12px 2px; margin:6px 0;
   }
-  $("#pinConfirmar").addEventListener("click", intentarEntrar);
-  $("#pinInput").addEventListener("keydown", (e) => { if (e.key === "Enter") intentarEntrar(); });
-  $("#pinVolver").addEventListener("click", () => {
-    pasoPin.style.display = "none";
-    pasoNombre.style.display = "block";
-  });
-  $("#cancelarCambio").addEventListener("click", () => {
-    overlay.style.display = "none";
-  });
-
-  if (alumnoActual && ALUMNOS.includes(alumnoActual)) {
-    overlay.style.display = "none";
-  } else {
-    alumnoActual = null;
-    overlay.style.display = "flex";
+  .circuito-header{
+    font-size:11px; font-weight:800; color:var(--mustard);
+    text-transform:uppercase; letter-spacing:.06em;
+    padding:8px 0 2px;
   }
-}
-
-/* ---------- Navegación entre tabs ---------- */
-const TITULOS = {
-  inicio: "Inicio", plan: "Mi Plan", tests: "Tests",
-  rpe: "RPE", rm: "Calculadora %RM", videos: "Videos", fichas: "Fichas",
-  sobre: "Sobre mí", faq: "Preguntas frecuentes"
-};
-
-function goTo(view){
-  $$(".view").forEach(v => v.classList.remove("active"));
-  $(`#view-${view}`).classList.add("active");
-  $$("nav.tabbar button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
-  $("#tituloVista").textContent = TITULOS[view];
-  if (view === "tests") renderTests();
-  if (view === "rpe") renderRpeHistorial();
-  if (view === "sobre") renderSobre();
-  if (view === "faq") renderFaq();
-}
-$$("nav.tabbar button").forEach(b => b.addEventListener("click", () => goTo(b.dataset.view)));
-$("#sobreLink").addEventListener("click", () => goTo("sobre"));
-$("#faqLink").addEventListener("click", () => goTo("faq"));
-$("#alumnoChip").addEventListener("click", abrirSelectorParaCambiar);
-$$("[data-back]").forEach(a => a.addEventListener("click", (e) => { e.preventDefault(); goTo("inicio"); }));
-
-/* ---------- Semana / progreso ---------- */
-function getSemanasDisponibles(){
-  const rutinaAlumno = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
-  return Object.keys(rutinaAlumno).map(Number).sort((a,b) => a-b);
-}
-
-// La semana con el número más alto cargada por el profe es la "actual"
-function getSemanaActual(){
-  const semanas = getSemanasDisponibles();
-  return semanas.length ? semanas[semanas.length - 1] : null;
-}
-
-function rutinaDeSemana(semana){
-  const rutinaAlumno = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
-  return rutinaAlumno[semana] || [];
-}
-
-let semanaSeleccionada = null;
-let diaSeleccionado = null;
-
-function diasDisponibles(semana){
-  const dias = [...new Set(rutinaDeSemana(semana).map(ej => ej.dia))];
-  return dias.sort((a,b) => a-b);
-}
-
-function diasCompletadosKey(semana){
-  return `dias_ok_${alumnoActual}_sem${semana}`;
-}
-function getDiasCompletados(semana){
-  return JSON.parse(localStorage.getItem(diasCompletadosKey(semana)) || "[]");
-}
-
-// Historial acumulado de semanas 100% completadas (no se resetea nunca)
-function historialSemanasKey(){
-  return `historial_semanas_${alumnoActual}`;
-}
-function getHistorialSemanas(){
-  return JSON.parse(localStorage.getItem(historialSemanasKey()) || "[]");
-}
-function actualizarHistorialSemana(semana){
-  const dias = diasDisponibles(semana);
-  const completados = getDiasCompletados(semana);
-  const semanaCompleta = dias.length > 0 && dias.every(d => completados.includes(d));
-  let historial = getHistorialSemanas();
-  if (semanaCompleta && !historial.includes(semana)){
-    historial.push(semana);
-    localStorage.setItem(historialSemanasKey(), JSON.stringify(historial));
-  } else if (!semanaCompleta && historial.includes(semana)){
-    historial = historial.filter(s => s !== semana);
-    localStorage.setItem(historialSemanasKey(), JSON.stringify(historial));
+  .circuito-box .ejercicio{border-bottom:1px solid var(--line);}
+  .circuito-box .ejercicio:last-child{border-bottom:none;}
+  .dia-tabs{
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:4px;
   }
-}
-
-function checklistKey(semana, dia){
-  return `check_${alumnoActual}_sem${semana}_dia${dia}`;
-}
-
-/* ---------- Chip de alumno + Inicio ---------- */
-function renderInicio(){
-  $("#alumnoChip").style.display = "inline-flex";
-  $("#alumnoNombre").textContent = alumnoActual;
-
-  const semanaActual = getSemanaActual();
-  const totalSemanas = getHistorialSemanas().length;
-
-  if (semanaActual === null){
-    $("#resumenHoy").innerHTML = `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
-  } else {
-    const dias = diasDisponibles(semanaActual);
-    const completados = getDiasCompletados(semanaActual);
-    $("#resumenHoy").innerHTML = `
-       <div class="ejercicio"><div><div class="nombre">Semana ${semanaActual} — ${completados.length}/${dias.length} días completados</div>
-        <div class="detalle">Tocá "Mi Plan" para ver el detalle y marcar tu progreso</div></div></div>
-       <div class="ejercicio"><div><div class="nombre">${totalSemanas} semana${totalSemanas === 1 ? "" : "s"} completa${totalSemanas === 1 ? "" : "s"} en total</div>
-        <div class="detalle">Se suma cada vez que terminás todos los días de una semana</div></div></div>`;
+  .dia-tab{
+    flex-shrink:0; background:var(--surface-2); border:1px solid var(--line);
+    color:var(--text-dim); font-family:var(--display); font-weight:600; font-size:13px;
+    padding:9px 14px; border-radius:999px; white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+    transition:transform .12s ease;
   }
-
-  const hist = getRpeHistorial();
-  const ultimo = hist.length ? hist[hist.length - 1] : null;
-  const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
-  let resumenRpeHtml = ultimo
-    ? `<div class="ejercicio"><div><div class="nombre">Último RPE: ${ultimo.rpe}/10 (${ultimo.fecha})</div>
-        <div class="detalle">Tocá "RPE" para ver tu historial completo</div></div></div>`
-    : `<div class="detalle">Todavía no registraste ningún RPE.</div>`;
-  if (pend.length){
-    resumenRpeHtml += `<div class="ejercicio"><div><div class="nombre">${pend.length} sin enviar a tu profe</div>
-        <div class="detalle">Se reintentará solo cuando tengas señal</div></div></div>`;
+  .dia-tab:active{transform:scale(.96);}
+  .dia-tab.active{
+    background:var(--track-grad); border-color:transparent; color:#fff;
+    box-shadow:var(--glow-track);
   }
-  $("#resumenRpe").innerHTML = resumenRpeHtml;
-}
-
-/* ---------- Mi Plan (selector de semana + tabs de día + rutina) ---------- */
-function renderPlan(){
-  const semanas = getSemanasDisponibles();
-  const cont = $("#listaEjercicios");
-  const tabsCont = $("#diaTabs");
-  const semanaSelect = $("#semanaSelect");
-  const btn = $("#terminarDiaBtn");
-  const status = $("#diaStatus");
-  status.textContent = "";
-
-  if (!semanas.length){
-    semanaSelect.innerHTML = "";
-    semanaSelect.style.display = "none";
-    tabsCont.innerHTML = "";
-    btn.style.display = "none";
-    cont.innerHTML = `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
-    return;
+  .dia-tab .tick{color:#5FAE6E; font-weight:900;}
+  .dia-tab.active .tick{color:#fff;}
+  .categoria-header{
+    font-family:var(--display); font-size:12px; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--track-bright); font-weight:600; margin:18px 0 4px;
+    padding-bottom:6px; border-bottom:2px solid var(--track-dim);
   }
-
-  const semanaActual = getSemanaActual();
-  if (semanaSeleccionada === null || !semanas.includes(semanaSeleccionada)){
-    semanaSeleccionada = semanaActual;
+  .categoria-header:first-child{margin-top:0;}
+  .ejercicio{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 0; border-bottom:1px solid var(--line);
   }
+  .ejercicio:last-child{border-bottom:none;}
+  .ejercicio .nombre{font-weight:700; font-size:15px;}
+  .ejercicio .detalle{font-size:12px; color:var(--text-dim); margin-top:2px;}
+  .ejercicio .series{font-family:var(--stat); font-size:20px; letter-spacing:.02em; color:var(--mustard); white-space:nowrap;}
+  .check{
+    width:22px; height:22px; border-radius:6px; border:2px solid var(--line);
+    display:inline-flex; align-items:center; justify-content:center; margin-right:10px;
+    flex-shrink:0; transition:transform .12s ease;
+  }
+  .check.done{background:var(--track-grad); border-color:transparent; box-shadow:var(--glow-track); transform:scale(1.04);}
+  .check.done::after{content:"✓"; font-size:13px; color:#fff; font-weight:900;}
+  .ej-row{display:flex; align-items:center;}
 
-  // Selector de semana (la más alta = actual, el resto queda como historial)
-  semanaSelect.style.display = "block";
-  semanaSelect.innerHTML = semanas.map(s =>
-    `<option value="${s}" ${s === semanaSeleccionada ? "selected" : ""}>Semana ${s}${s === semanaActual ? " (actual)" : ""}</option>`
-  ).join("");
-  semanaSelect.onchange = () => {
-    semanaSeleccionada = Number(semanaSelect.value);
-    diaSeleccionado = null;
-    renderPlan();
-  };
+  /* Selector alumno */
+  .selector-overlay{
+    position:fixed; inset:0; z-index:100;
+    background:
+      radial-gradient(520px 320px at 50% -8%, rgba(255,94,35,.16), transparent 70%),
+      var(--bg);
+    display:flex; flex-direction:column; padding:24px; padding-top:calc(48px + env(safe-area-inset-top));
+    overflow-y:auto;
+  }
+  .selector-overlay h2{font-family:var(--display); font-weight:700; font-size:26px; text-transform:uppercase; margin-bottom:4px;}
+  .selector-overlay p{color:var(--text-dim); font-size:14px; margin:0 0 20px;}
+  .alumno-list{}
+  .alumno-opt{
+    display:block; width:100%; text-align:left; background:var(--surface);
+    border:1px solid var(--line); border-left:3px solid var(--line); color:var(--text); padding:14px 16px;
+    border-radius:10px; margin-bottom:8px; font-size:15px; font-weight:600;
+    font-family:inherit; transition:transform .1s ease, border-color .15s ease;
+  }
+  .alumno-opt:first-child{border-left-color:var(--mustard);}
+  .alumno-opt:active{background:var(--surface-2); transform:scale(.99);}
 
-  const dias = diasDisponibles(semanaSeleccionada);
-  const completados = getDiasCompletados(semanaSeleccionada);
+  /* RPE gauge */
+  .gauge-wrap{display:flex; flex-direction:column; align-items:center; padding:8px 0 4px;}
+  .gauge-val{
+    font-family:var(--stat); font-size:56px; font-weight:400; letter-spacing:.02em; line-height:1; margin-top:6px;
+    background:var(--track-grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .gauge-label{font-family:var(--display); font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em;}
+  input[type="range"]{
+    width:100%; accent-color:var(--track-bright); margin:14px 0 4px;
+  }
+  .scale-labels{display:flex; justify-content:space-between; font-size:10px; color:var(--text-dim);}
 
-  if (diaSeleccionado === null || !dias.includes(diaSeleccionado)){
-    diaSeleccionado = dias.find(d => !completados.includes(d)) ?? dias[0];
+  textarea, select, input[type="number"], input[type="date"], input[type="text"], input[type="tel"]{
+    width:100%; background:var(--surface-2); border:1px solid var(--line);
+    color:var(--text); border-radius:10px; padding:11px 12px; font-size:14px;
+    font-family:inherit; margin-top:6px;
+  }
+  label{font-family:var(--display); font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; display:block; margin-top:14px;}
+  label:first-child{margin-top:0;}
+
+  .btn{
+    display:block; width:100%; background:var(--track-grad); color:#fff;
+    border:none; border-radius:0; padding:15px 14px; font-size:15px;
+    font-family:var(--display); font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    margin-top:16px; box-shadow:var(--glow-track); transition:transform .12s ease, box-shadow .12s ease;
+    clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+  .btn:active{transform:scale(.98); box-shadow:none;}
+  .btn.secondary{background:var(--surface-2); color:var(--text); border:1px solid var(--line); box-shadow:none;}
+  .status-msg{font-size:13px; margin-top:10px; text-align:center; color:var(--text-dim);}
+  .status-msg.ok{color:#5FAE6E;}
+  .status-msg.err{color:var(--track-bright);}
+
+  .rm-result{
+    text-align:center; padding:14px 0 6px;
+  }
+  .rm-result .big{
+    font-family:var(--stat); font-size:52px; font-weight:400; letter-spacing:.02em;
+    background:var(--track-grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  table.pct{width:100%; border-collapse:collapse; margin-top:10px;}
+  table.pct td{padding:8px 4px; border-bottom:1px solid var(--line); font-size:14px;}
+  table.pct td:first-child{color:var(--text-dim);}
+  table.pct td:last-child{text-align:right; font-weight:700; font-family:var(--stat); font-size:16px; letter-spacing:.02em;}
+
+  .video-item{
+    display:flex; align-items:center; gap:12px; padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .video-item:last-child{border-bottom:none;}
+  .video-thumb{
+    width:48px; height:48px; border-radius:8px; background:var(--surface-2);
+    border:1px solid rgba(76,138,166,.35);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .video-thumb svg{width:18px; height:18px; stroke:var(--chalk); fill:none;}
+  .video-item .titulo{font-size:14px; font-weight:600;}
+  .video-item .grupo{font-family:var(--display); font-size:11px; letter-spacing:.03em; color:var(--chalk);}
+  a.video-link{color:inherit; text-decoration:none; display:flex; align-items:center; gap:12px; width:100%;}
+
+  .sobre-card{
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .sobre-foto{
+    width:52px; height:52px; border-radius:50%; background:var(--surface-2);
+    border:2px solid var(--track-bright); display:flex; align-items:center; justify-content:center;
+    font-size:22px; flex-shrink:0; overflow:hidden;
+  }
+  .sobre-foto img{width:100%; height:100%; object-fit:cover;}
+  .sobre-nombre{font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.02em;}
+  .sobre-sub{font-size:12px; color:var(--text-dim);}
+  .faq-link{cursor:pointer;}
+  .volver-link{
+    display:inline-block; color:var(--text-dim); font-size:13px; margin-bottom:12px;
+    text-decoration:none; font-weight:700;
+  }
+  .foto-perfil{
+    width:100%; max-width:220px; aspect-ratio:1; border-radius:16px; margin:0 auto 16px;
+    background:var(--surface-2); border:2px solid var(--track-bright);
+    box-shadow:var(--glow-track);
+    display:flex; align-items:center; justify-content:center; font-size:48px; overflow:hidden;
+  }
+  .foto-perfil img{width:100%; height:100%; object-fit:cover;}
+  .bio-texto{font-size:14px; line-height:1.6; color:var(--text);}
+  .faq-item{border-bottom:1px solid var(--line); padding:12px 0;}
+  .faq-item:last-child{border-bottom:none;}
+  .faq-pregunta{
+    font-weight:700; font-size:14px; display:flex; justify-content:space-between;
+    align-items:center; cursor:pointer;
+  }
+  .faq-respuesta{
+    font-size:13px; color:var(--text-dim); margin-top:8px; line-height:1.5; display:none;
+  }
+  .faq-item.open .faq-respuesta{display:block;}
+  .faq-item.open .faq-icono{transform:rotate(45deg);}
+  .faq-icono{font-size:18px; color:var(--track-bright); transition:transform .15s;}
+  .novedad-item{
+    display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--line);
+  }
+  .novedad-item:last-child{border-bottom:none;}
+  .novedad-thumb{
+    width:44px; height:44px; border-radius:8px; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px;
+  }
+  .novedad-texto{font-size:13px; color:var(--text);}
+  .novedad-fecha{font-size:11px; color:var(--text-dim); margin-top:2px;}
+
+  .rpe-hist-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .rpe-hist-item:last-child{border-bottom:none;}
+  .rpe-hist-fecha{font-size:13px; color:var(--text);}
+  .rpe-hist-detalle{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .rpe-hist-valor{
+    font-family:var(--stat); font-size:22px; letter-spacing:.02em; color:var(--mustard); flex-shrink:0; margin-left:10px;
   }
 
-  // Tabs de día
-  tabsCont.innerHTML = "";
-  dias.forEach(dia => {
-    const tab = document.createElement("button");
-    tab.className = "dia-tab" + (dia === diaSeleccionado ? " active" : "");
-    tab.innerHTML = `Día ${dia} ${completados.includes(dia) ? '<span class="tick">✓</span>' : ""}`;
-    tab.addEventListener("click", () => { diaSeleccionado = dia; renderPlan(); });
-    tabsCont.appendChild(tab);
-  });
-
-  // Ejercicios del día, agrupados por categoría en orden fijo
-  const doneKey = checklistKey(semanaSeleccionada, diaSeleccionado);
-  let done = JSON.parse(localStorage.getItem(doneKey) || "[]");
-  const rutinaConIndice = rutinaDeSemana(semanaSeleccionada).map((ej, i) => ({ ...ej, _i: i }));
-
-  cont.innerHTML = "";
-  CATEGORIAS_ORDEN.forEach(categoria => {
-    const ejerciciosCat = rutinaConIndice.filter(
-      ej => ej.dia === diaSeleccionado && ej.categoria === categoria
-    );
-    if (!ejerciciosCat.length) return;
-
-    const header = document.createElement("div");
-    header.className = "categoria-header";
-    header.textContent = categoria;
-    cont.appendChild(header);
-
-    // Agrupar ejercicios consecutivos que compartan el mismo "circuito"
-    let idx = 0;
-    while (idx < ejerciciosCat.length){
-      const ej = ejerciciosCat[idx];
-      if (ej.circuito !== undefined && ej.circuito !== "" && ej.circuito !== null){
-        const grupo = [];
-        while (idx < ejerciciosCat.length && ejerciciosCat[idx].circuito === ej.circuito){
-          grupo.push(ejerciciosCat[idx]);
-          idx++;
-        }
-        const box = document.createElement("div");
-        box.className = "circuito-box";
-        const rounds = grupo[0].rounds;
-        box.innerHTML = `<div class="circuito-header">🔁 Circuito${rounds ? " · " + rounds + " ROUNDS" : ""}</div>`;
-        grupo.forEach(g => box.appendChild(renderEjercicioRow(g, g._i, done, doneKey)));
-        cont.appendChild(box);
-      } else {
-        cont.appendChild(renderEjercicioRow(ej, ej._i, done, doneKey));
-        idx++;
-      }
-    }
-  });
-
-  function renderEjercicioRow(ej, i, done, doneKey){
-    const row = document.createElement("div");
-    row.className = "ejercicio";
-    row.innerHTML = `
-      <div class="ej-row">
-        <div class="check ${done.includes(i) ? "done" : ""}" data-i="${i}"></div>
-        <div>
-          <div class="nombre">${ej.nombre}</div>
-          <div class="detalle">${ej.detalle}</div>
-        </div>
-      </div>
-      <div class="series">${ej.reps}</div>`;
-    row.querySelector(".check").addEventListener("click", () => {
-      let d = JSON.parse(localStorage.getItem(doneKey) || "[]");
-      if (d.includes(i)) d = d.filter(x => x !== i);
-      else d.push(i);
-      localStorage.setItem(doneKey, JSON.stringify(d));
-      renderPlan();
-    });
-    return row;
+  .ficha-item{
+    display:flex; align-items:center; gap:12px; padding:12px 0;
+    border-bottom:1px solid var(--line);
   }
-
-  // Botón de marcar día como terminado
-  btn.style.display = "block";
-  const yaCompletado = completados.includes(diaSeleccionado);
-  btn.textContent = yaCompletado ? "Deshacer (marcar como no terminada)" : "Marcar rutina de hoy como terminada";
-  btn.onclick = () => {
-    let comp = getDiasCompletados(semanaSeleccionada);
-    if (comp.includes(diaSeleccionado)) comp = comp.filter(d => d !== diaSeleccionado);
-    else comp.push(diaSeleccionado);
-    localStorage.setItem(diasCompletadosKey(semanaSeleccionada), JSON.stringify(comp));
-    actualizarHistorialSemana(semanaSeleccionada);
-    if (!yaCompletado){
-      const siguiente = dias.find(d => !comp.includes(d) && d !== diaSeleccionado);
-      if (siguiente) diaSeleccionado = siguiente;
-    }
-    renderPlan();
-  };
-}
-
-/* ---------- Tests (gráfico histórico) ---------- */
-let testChartInstance = null;
-function renderTests(){
-  const tests = getTestsCombinados();
-  const nombres = Object.keys(tests);
-  const select = $("#testSelect");
-
-  if (!nombres.length){
-    select.innerHTML = `<option>Sin tests cargados</option>`;
-    if (testChartInstance) testChartInstance.destroy();
-    return;
+  .ficha-item:last-child{border-bottom:none;}
+  .ficha-icon{
+    width:44px; height:44px; border-radius:8px; background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
   }
+  .ficha-icon svg{width:20px; height:20px; stroke:var(--track); fill:none; stroke-width:1.8;}
+  .ficha-nombre{font-size:14px; font-weight:600;}
+  a.ficha-link{color:inherit; text-decoration:none; display:flex; align-items:center; gap:12px; width:100%;}
 
-  select.innerHTML = nombres.map(n => `<option value="${n}">${n}</option>`).join("");
-  select.onchange = () => dibujarTest(select.value);
-  dibujarTest(select.value || nombres[0]);
-}
+  canvas{max-width:100%;}
+</style>
+</head>
+<body>
 
-function dibujarTest(nombreTest){
-  const datos = (getTestsCombinados()[nombreTest]) || [];
-  const ctx = $("#testChart").getContext("2d");
-  if (testChartInstance) testChartInstance.destroy();
-  testChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: datos.map(d => d.fecha),
-      datasets: [{
-        label: nombreTest,
-        data: datos.map(d => d.valor),
-        borderColor: "#C1440E",
-        backgroundColor: "rgba(193,68,14,0.15)",
-        tension: 0.25,
-        fill: true,
-        pointRadius: 4,
-        pointBackgroundColor: "#D8B93B"
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: "#9A9A94" }, grid: { color: "#3A3A3E" } },
-        y: { ticks: { color: "#9A9A94" }, grid: { color: "#3A3A3E" } }
-      }
-    }
-  });
-}
+<div class="selector-overlay" id="selectorOverlay">
+  <div id="pasoNombre">
+    <div class="eyebrow">Bienvenido</div>
+    <h2>¿Quién sos?</h2>
+    <p>Elegí tu nombre para ver tu plan.</p>
+    <div class="alumno-list" id="alumnoList"></div>
+    <button class="btn secondary" id="cancelarCambio" style="display:none;">Cancelar</button>
+  </div>
+  <div id="pasoPin" style="display:none;">
+    <div class="eyebrow">Un paso más</div>
+    <h2 id="pinTitulo">Ingresá tu PIN</h2>
+    <p>Tu profe te pasó un código de 4 dígitos.</p>
+    <input type="tel" inputmode="numeric" maxlength="4" id="pinInput" placeholder="••••"
+      style="font-size:28px; letter-spacing:.4em; text-align:center; padding:16px;">
+    <div class="status-msg err" id="pinError" style="min-height:18px;"></div>
+    <button class="btn" id="pinConfirmar">Entrar</button>
+    <button class="btn secondary" id="pinVolver">← Elegir otro nombre</button>
+  </div>
+</div>
 
-/* ---------- RPE ---------- */
-const RPE_LABELS = ["Nada","Muy muy leve","Muy leve","Leve","Moderado","Algo duro","Duro","Muy duro","Muy muy duro","Casi máximo","Máximo"];
+<header>
+  <div class="eyebrow">Profe.Eric</div>
+  <h1 id="tituloVista">Inicio</h1>
+  <div class="alumno-chip" id="alumnoChip" style="display:none; cursor:pointer;" title="Tocá para cambiar de alumno">
+    <span>Alumno:</span><b id="alumnoNombre"></b>
+    <span style="margin-left:4px; color:var(--text-dim);">⇄</span>
+  </div>
+</header>
 
-function initRpe(){
-  $("#rpeFecha").value = new Date().toISOString().slice(0,10);
-  const slider = $("#rpeSlider");
-  const actualizar = () => {
-    $("#rpeVal").textContent = slider.value;
-    $("#rpeValLabel").textContent = RPE_LABELS[+slider.value];
-  };
-  slider.addEventListener("input", actualizar);
-  actualizar();
+<main>
 
-  $("#rpeEnviar").addEventListener("click", enviarRpe);
-}
-
-function rpeHistorialKey(){
-  return `rpe_historial_${alumnoActual}`;
-}
-function getRpeHistorial(){
-  return JSON.parse(localStorage.getItem(rpeHistorialKey()) || "[]");
-}
-function guardarEnHistorialRpe(payload){
-  const hist = getRpeHistorial();
-  hist.push({ fecha: payload.fecha, rpe: Number(payload.rpe), sueno: payload.sueno, dolor: payload.dolor });
-  hist.sort((a,b) => a.fecha.localeCompare(b.fecha));
-  localStorage.setItem(rpeHistorialKey(), JSON.stringify(hist));
-}
-
-let rpeChartInstance = null;
-function renderRpeHistorial(){
-  const hist = getRpeHistorial();
-  const ctx = $("#rpeChart").getContext("2d");
-  if (rpeChartInstance) rpeChartInstance.destroy();
-
-  if (!hist.length){
-    $("#rpeHistorialLista").innerHTML = `<div class="detalle">Todavía no registraste ningún RPE.</div>`;
-    return;
-  }
-
-  rpeChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: hist.map(h => h.fecha),
-      datasets: [{
-        label: "RPE",
-        data: hist.map(h => h.rpe),
-        borderColor: "#C1440E",
-        backgroundColor: "rgba(193,68,14,0.15)",
-        tension: 0.25,
-        fill: true,
-        pointRadius: 4,
-        pointBackgroundColor: "#D8B93B"
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { min: 0, max: 10, ticks: { color: "#9A9A94", stepSize: 2 }, grid: { color: "#3A3A3E" } },
-        x: { ticks: { color: "#9A9A94" }, grid: { color: "#3A3A3E" } }
-      }
-    }
-  });
-
-  const ultimos = [...hist].reverse().slice(0, 10);
-  $("#rpeHistorialLista").innerHTML = ultimos.map(h => `
-    <div class="rpe-hist-item">
+  <section class="view active" id="view-inicio">
+    <div class="card sobre-card" id="sobreLink">
+      <div class="sobre-foto" id="sobreFotoChip">👤</div>
       <div>
-        <div class="rpe-hist-fecha">${h.fecha}</div>
-        <div class="rpe-hist-detalle">${h.sueno ? `${h.sueno}hs de sueño` : ""}${h.dolor ? ` · ${h.dolor}` : ""}</div>
+        <div class="sobre-nombre">Profe.Eric</div>
+        <div class="sobre-sub">Conocé a tu profe →</div>
       </div>
-      <div class="rpe-hist-valor">${h.rpe}</div>
     </div>
-  `).join("");
-}
-
-async function enviarRpe(){
-  const payload = {
-    alumno: alumnoActual,
-    fecha: $("#rpeFecha").value,
-    rpe: $("#rpeSlider").value,
-    sueno: $("#rpeSueno").value,
-    dolor: $("#rpeDolor").value,
-    ts: new Date().toISOString()
-  };
-  const statusEl = $("#rpeStatus");
-  statusEl.className = "status-msg";
-  statusEl.textContent = "Enviando...";
-
-  // Se guarda en el historial propio del alumno pase lo que pase con el envío
-  guardarEnHistorialRpe(payload);
-  renderRpeHistorial();
-
-  if (!APPS_SCRIPT_URL){
-    guardarPendiente(payload);
-    statusEl.textContent = "Guardado. (Tu profe todavía no activó el envío centralizado.)";
-    limpiarFormRpe();
-    return;
-  }
-
-  try{
-    await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors", // Apps Script Web Apps no siempre habilitan CORS
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(payload)
-    });
-    statusEl.textContent = "¡Enviado! Gracias.";
-    statusEl.classList.add("ok");
-    limpiarFormRpe();
-    reintentarPendientes(); // por si había cola vieja
-  }catch(err){
-    guardarPendiente(payload);
-    statusEl.textContent = "Sin conexión: se guardó y se enviará solo más tarde.";
-    statusEl.classList.add("err");
-  }
-}
-
-function limpiarFormRpe(){
-  $("#rpeSueno").value = "";
-  $("#rpeDolor").value = "";
-}
-
-function guardarPendiente(payload){
-  const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
-  pend.push(payload);
-  localStorage.setItem("rpePendientes", JSON.stringify(pend));
-}
-
-async function reintentarPendientes(){
-  if (!APPS_SCRIPT_URL) return;
-  let pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
-  if (!pend.length) return;
-  const restantes = [];
-  for (const p of pend){
-    try{
-      await fetch(APPS_SCRIPT_URL, {
-        method: "POST", mode: "no-cors",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(p)
-      });
-    }catch(e){ restantes.push(p); }
-  }
-  localStorage.setItem("rpePendientes", JSON.stringify(restantes));
-}
-
-/* ---------- Calculadora %RM + registro de test ---------- */
-function rmHistoryKey(){
-  return `rm_history_${alumnoActual}`;
-}
-function getRmHistory(){
-  return JSON.parse(localStorage.getItem(rmHistoryKey()) || "{}");
-}
-
-function initRm(){
-  const select = $("#rmEjercicio");
-  select.innerHTML = EJERCICIOS_RM.map(e => `<option value="${e}">${e}</option>`).join("");
-
-  let ultimoRm = null;
-
-  $("#rmCalcular").addEventListener("click", () => {
-    const peso = parseFloat($("#rmPeso").value);
-    const reps = parseFloat($("#rmReps").value);
-    if (!peso || !reps){
-      $("#rmResultado").style.display = "none";
-      return;
-    }
-    ultimoRm = reps === 1 ? peso : peso * (1 + reps/30);
-    $("#rmValor").textContent = ultimoRm.toFixed(1) + " kg";
-    const porcentajes = [100,95,90,85,80,75,70,65,60,55,50];
-    $("#rmTabla").innerHTML = porcentajes.map(p =>
-      `<tr><td>${p}%</td><td>${(ultimoRm*p/100).toFixed(1)} kg</td></tr>`
-    ).join("");
-    $("#rmResultado").style.display = "block";
-    $("#rmStatus").textContent = "";
-    $("#rmStatus").className = "status-msg";
-  });
-
-  $("#rmGuardar").addEventListener("click", async () => {
-    if (ultimoRm === null) return;
-    const ejercicio = select.value;
-    const fecha = new Date().toISOString().slice(0,10);
-    const statusEl = $("#rmStatus");
-
-    // Guardar localmente para que aparezca ya mismo en "Tests"
-    const hist = getRmHistory();
-    if (!hist[ejercicio]) hist[ejercicio] = [];
-    hist[ejercicio].push({ fecha, valor: Math.round(ultimoRm * 10) / 10 });
-    localStorage.setItem(rmHistoryKey(), JSON.stringify(hist));
-
-    statusEl.textContent = "¡Guardado! Ya lo podés ver en 'Tests'.";
-    statusEl.classList.add("ok");
-
-    // Mandarlo también al backend, si está configurado (mismo Sheet que el RPE)
-    if (APPS_SCRIPT_URL){
-      const payload = { tipo: "test_rm", alumno: alumnoActual, ejercicio, peso: $("#rmPeso").value, reps: $("#rmReps").value, rm: ultimoRm.toFixed(1), fecha, ts: new Date().toISOString() };
-      try{
-        await fetch(APPS_SCRIPT_URL, {
-          method: "POST", mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify(payload)
-        });
-      }catch(e){ /* queda guardado local igual; no es crítico si esto falla */ }
-    }
-  });
-}
-
-/* ---------- Tests combinados: los que carga el profe + los que se
-   auto-registra el alumno desde %RM ---------- */
-function getTestsCombinados(){
-  const base = { ...(TESTS[alumnoActual] || {}) };
-  const propios = getRmHistory();
-  Object.keys(propios).forEach(ej => {
-    const combinado = [...(base[ej] || []), ...propios[ej]];
-    combinado.sort((a,b) => a.fecha.localeCompare(b.fecha));
-    base[ej] = combinado;
-  });
-  return base;
-}
-
-/* ---------- Videos ---------- */
-function renderVideos(){
-  const buscador = $("#videoBuscador");
-  buscador.addEventListener("input", () => dibujarVideos(buscador.value));
-  dibujarVideos("");
-  renderMetodos();
-}
-
-function dibujarVideos(filtro){
-  const f = filtro.trim().toLowerCase();
-  const filtrados = f
-    ? VIDEOS.filter(v => v.titulo.toLowerCase().includes(f) || v.grupo.toLowerCase().includes(f))
-    : VIDEOS;
-
-  if (!filtrados.length){
-    $("#listaVideos").innerHTML = `<div class="detalle">No se encontraron ejercicios para "${filtro}".</div>`;
-    return;
-  }
-
-  // Agrupar manteniendo el orden en que aparecen los grupos
-  const grupos = [];
-  const porGrupo = {};
-  filtrados.forEach(v => {
-    if (!porGrupo[v.grupo]){ porGrupo[v.grupo] = []; grupos.push(v.grupo); }
-    porGrupo[v.grupo].push(v);
-  });
-
-  $("#listaVideos").innerHTML = grupos.map(g => `
-    <div class="categoria-header">${g}</div>
-    ${porGrupo[g].map(v => `
-      <div class="video-item">
-        <a class="video-link" href="${v.url}" target="_blank" rel="noopener">
-          <div class="video-thumb">
-            <svg viewBox="0 0 24 24"><path d="M10 9l5 3-5 3z"/><circle cx="12" cy="12" r="9"/></svg>
-          </div>
-          <div>
-            <div class="titulo">${v.titulo}</div>
-          </div>
-        </a>
-      </div>`).join("")}
-  `).join("");
-}
-
-/* ---------- Métodos de entrenamiento (glosario tipo acordeón) ---------- */
-function renderMetodos(){
-  $("#listaMetodos").innerHTML = METODOS_ENTRENAMIENTO.map((m, i) => `
-    <div class="faq-item" data-i="${i}">
-      <div class="faq-pregunta">${m.nombre}<span class="faq-icono">+</span></div>
-      <div class="faq-respuesta">${m.descripcion}</div>
+    <div class="card">
+      <h3>Hoy</h3>
+      <div id="resumenHoy"></div>
     </div>
-  `).join("");
-  $$("#listaMetodos .faq-item").forEach(el => {
-    el.querySelector(".faq-pregunta").addEventListener("click", () => el.classList.toggle("open"));
-  });
-}
-
-/* ---------- Sobre mí (bio + foto + novedades) ---------- */
-function renderSobre(){
-  $("#bioTexto").innerHTML = PERFIL.bio.split("\n\n").map(p => `<p>${p}</p>`).join("");
-  if (PERFIL.foto){
-    $("#fotoPerfilGrande").innerHTML = `<img src="${PERFIL.foto}" alt="Foto de perfil">`;
-    $("#sobreFotoChip").innerHTML = `<img src="${PERFIL.foto}" alt="Foto de perfil">`;
-  }
-  $("#instagramBtn").href = PERFIL.instagram || "#";
-}
-
-/* ---------- FAQ ---------- */
-function renderFaq(){
-  if (!FAQ.length){
-    $("#listaFaq").innerHTML = `<div class="detalle">Todavía no hay preguntas frecuentes cargadas.</div>`;
-    return;
-  }
-  $("#listaFaq").innerHTML = FAQ.map((item, i) => `
-    <div class="faq-item" data-i="${i}">
-      <div class="faq-pregunta">${item.pregunta}<span class="faq-icono">+</span></div>
-      <div class="faq-respuesta">${item.respuesta}</div>
+    <div class="card">
+      <h3>Últimas sensaciones</h3>
+      <div id="resumenRpe"></div>
     </div>
-  `).join("");
-  $$("#listaFaq .faq-item").forEach(el => {
-    el.querySelector(".faq-pregunta").addEventListener("click", () => el.classList.toggle("open"));
-  });
-}
-
-/* ---------- Carga de rutinas.xlsx (SheetJS) ---------- */
-async function cargarRutinasDesdeExcel(){
-  try{
-    const resp = await fetch("rutinas.xlsx");
-    const buf = await resp.arrayBuffer();
-    const wb = XLSX.read(buf, { type: "array" });
-    const nuevo = {};
-
-    wb.SheetNames.forEach(nombreHoja => {
-      if (nombreHoja === "LEEME") return;
-      if (!ALUMNOS.includes(nombreHoja)) return; // ignora pestañas que no son de un alumno
-
-      const filas = XLSX.utils.sheet_to_json(wb.Sheets[nombreHoja], { defval: "" });
-      const porSemana = {};
-
-      filas.forEach(f => {
-        const semana = Number(f["Semana"]);
-        const dia = Number(f["Día"] || f["Dia"]);
-        const nombreEj = String(f["Ejercicio"] || "").trim();
-        if (!semana || !dia || !nombreEj) return; // fila incompleta, se ignora
-
-        const ej = {
-          dia,
-          categoria: String(f["Categoría"] || f["Categoria"] || "").trim(),
-          nombre: nombreEj,
-          detalle: String(f["Detalle"] || ""),
-          reps: String(f["Series/Reps"] || "")
-        };
-        const circuito = f["Circuito"];
-        if (circuito !== "" && circuito !== undefined && circuito !== null){
-          ej.circuito = circuito;
-          ej.rounds = f["Rounds"];
-        }
-
-        if (!porSemana[semana]) porSemana[semana] = [];
-        porSemana[semana].push(ej);
-      });
-
-      if (Object.keys(porSemana).length) nuevo[nombreHoja] = porSemana;
-    });
-
-    RUTINAS = nuevo;
-  }catch(err){
-    console.error("No se pudo cargar rutinas.xlsx:", err);
-    // Si falla (sin conexión y todavía no cacheado, archivo con error, etc.)
-    // la app sigue funcionando con RUTINAS vacío — se ve el mensaje de
-    // "todavía no tenés rutina cargada" en vez de romperse.
-  }
-}
-
-/* ---------- Fichas (PDFs por patrón de movimiento) ---------- */
-function renderFichas(){
-  if (!FICHAS.length){
-    $("#listaFichas").innerHTML = `<div class="detalle">Todavía no hay fichas cargadas.</div>`;
-    return;
-  }
-  $("#listaFichas").innerHTML = FICHAS.map(f => `
-    <div class="ficha-item">
-      <a class="ficha-link" href="${f.archivo}" target="_blank" rel="noopener">
-        <div class="ficha-icon">
-          <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/></svg>
-        </div>
-        <div class="ficha-nombre">${f.patron}</div>
-      </a>
+    <div class="card faq-link" id="faqLink">
+      <h3 style="margin:0;">¿Tenés dudas? Mirá las preguntas frecuentes →</h3>
     </div>
-  `).join("");
-}
+  </section>
 
-/* ---------- Init general ---------- */
-async function renderAll(){
-  if (!alumnoActual) return;
-  await rutinasListas;
-  renderInicio();
-  renderPlan();
-  renderVideos();
-  renderFichas();
-  reintentarPendientes();
-}
+  <section class="view" id="view-plan">
+    <div class="card">
+      <h3 id="planTitulo">Rutina de la semana</h3>
+      <select id="semanaSelect" style="margin-bottom:10px;"></select>
+      <div class="dia-tabs" id="diaTabs"></div>
+      <div id="listaEjercicios"></div>
+      <button class="btn" id="terminarDiaBtn">Marcar rutina de hoy como terminada</button>
+      <div class="status-msg" id="diaStatus"></div>
+    </div>
+  </section>
 
-const rutinasListas = cargarRutinasDesdeExcel();
+  <section class="view" id="view-tests">
+    <div class="card">
+      <h3>Evolución de tests</h3>
+      <select id="testSelect"></select>
+      <canvas id="testChart" height="220"></canvas>
+    </div>
+  </section>
 
-initSelectorAlumno();
-initRpe();
-initRm();
-if (alumnoActual) renderAll();
+  <section class="view" id="view-rpe">
+    <div class="card">
+      <h3>¿Cómo te sentiste hoy?</h3>
+      <label>Fecha</label>
+      <input type="date" id="rpeFecha">
+      <label>Esfuerzo percibido (RPE 0-10)</label>
+      <div class="gauge-wrap">
+        <div class="gauge-val num" id="rpeVal">5</div>
+        <div class="gauge-label" id="rpeValLabel">Moderado</div>
+      </div>
+      <input type="range" id="rpeSlider" min="0" max="10" value="5">
+      <div class="scale-labels"><span>0 · Nada</span><span>10 · Máximo</span></div>
+      <label>Horas de sueño</label>
+      <input type="number" id="rpeSueno" min="0" max="14" step="0.5" placeholder="Ej: 7.5">
+      <label>Dolores / molestias (opcional)</label>
+      <textarea id="rpeDolor" rows="2" placeholder="Ej: molestia leve en isquiotibial derecho"></textarea>
+      <button class="btn" id="rpeEnviar">Enviar</button>
+      <div class="status-msg" id="rpeStatus"></div>
+    </div>
+    <div class="card">
+      <h3>Tu historial de RPE</h3>
+      <canvas id="rpeChart" height="180"></canvas>
+      <div id="rpeHistorialLista"></div>
+    </div>
+  </section>
 
-if ("serviceWorker" in navigator){
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-  });
-}
+  <section class="view" id="view-rm">
+    <div class="card">
+      <h3>Registrar test de fuerza</h3>
+      <label>Ejercicio</label>
+      <select id="rmEjercicio"></select>
+      <label>Peso levantado (kg)</label>
+      <input type="number" id="rmPeso" placeholder="Ej: 80">
+      <label>Repeticiones realizadas</label>
+      <input type="number" id="rmReps" placeholder="Ej: 5">
+      <button class="btn" id="rmCalcular">Calcular</button>
+      <div class="rm-result" id="rmResultado" style="display:none;">
+        <div class="gauge-label">1RM estimado (Epley)</div>
+        <div class="big num" id="rmValor"></div>
+        <table class="pct" id="rmTabla"></table>
+        <button class="btn secondary" id="rmGuardar">Guardar este test</button>
+        <div class="status-msg" id="rmStatus"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-videos">
+    <div class="card">
+      <h3>Video-biblioteca</h3>
+      <input type="text" id="videoBuscador" placeholder="Buscar ejercicio...">
+      <div id="listaVideos"></div>
+    </div>
+    <div class="card">
+      <h3>Métodos de entrenamiento</h3>
+      <div id="listaMetodos"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-fichas">
+    <div class="card">
+      <h3>Fichas por patrón de movimiento</h3>
+      <div id="listaFichas"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-sobre">
+    <a class="volver-link" href="#" data-back>← Volver a Inicio</a>
+    <div class="card">
+      <div class="foto-perfil" id="fotoPerfilGrande">👤</div>
+      <div class="bio-texto" id="bioTexto"></div>
+    </div>
+    <div class="card">
+      <h3>Redes</h3>
+      <a class="btn" style="text-decoration:none; display:block; text-align:center;" id="instagramBtn" href="#" target="_blank" rel="noopener">📷 Seguime en Instagram</a>
+    </div>
+  </section>
+
+  <section class="view" id="view-faq">
+    <a class="volver-link" href="#" data-back>← Volver a Inicio</a>
+    <div class="card">
+      <div id="listaFaq"></div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-view="inicio" class="active">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    Inicio
+  </button>
+  <button data-view="plan">
+    <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+    Mi Plan
+  </button>
+  <button data-view="tests">
+    <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 3 4-6"/></svg>
+    Tests
+  </button>
+  <button data-view="rpe">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    RPE
+  </button>
+  <button data-view="rm">
+    <svg viewBox="0 0 24 24"><path d="M4 12h16M6 8v8M18 8v8M9 10v4M15 10v4"/></svg>
+    %RM
+  </button>
+  <button data-view="videos">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>
+    Videos
+  </button>
+  <button data-view="fichas">
+    <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/></svg>
+    Fichas
+  </button>
+</nav>
+
+<script src="chart.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
