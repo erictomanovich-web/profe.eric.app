@@ -675,7 +675,7 @@ function renderFaq(){
 /* ---------- Carga de rutinas.xlsx (SheetJS) ---------- */
 async function cargarRutinasDesdeExcel(){
   try{
-    const resp = await fetch("rutinas.xlsx");
+    const resp = await fetch("rutinas.xlsx", { cache: "no-store" });
     const buf = await resp.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const nuevo = {};
