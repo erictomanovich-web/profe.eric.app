@@ -86,7 +86,7 @@ function goTo(view){
   $(`#view-${view}`).classList.add("active");
   $$("nav.tabbar button").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   $("#tituloVista").textContent = TITULOS[view];
-  if (view === "tests") renderTests();
+  if (view === "tests"){ renderTests(); renderPesoProgreso(); }
   if (view === "rpe") renderRpeHistorial();
   if (view === "sobre") renderSobre();
   if (view === "faq") renderFaq();
@@ -283,6 +283,7 @@ function renderPlan(){
   function renderEjercicioRow(ej, i, done, doneKey){
     const row = document.createElement("div");
     row.className = "ejercicio";
+    const pesoGuardado = getPesoDeHoy(ej.nombre);
     row.innerHTML = `
       <div class="ej-row">
         <div class="check ${done.includes(i) ? "done" : ""}" data-i="${i}"></div>
@@ -291,13 +292,20 @@ function renderPlan(){
           <div class="detalle">${ej.detalle}</div>
         </div>
       </div>
-      <div class="series">${ej.reps}</div>`;
+      <div class="ej-right">
+        <div class="series">${ej.reps}</div>
+        <input type="number" class="peso-input" placeholder="kg" inputmode="decimal" value="${pesoGuardado}">
+      </div>`;
     row.querySelector(".check").addEventListener("click", () => {
       let d = JSON.parse(localStorage.getItem(doneKey) || "[]");
       if (d.includes(i)) d = d.filter(x => x !== i);
       else d.push(i);
       localStorage.setItem(doneKey, JSON.stringify(d));
       renderPlan();
+    });
+    row.querySelector(".peso-input").addEventListener("change", (e) => {
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val) && val > 0) guardarPesoEjercicio(ej.nombre, val);
     });
     return row;
   }
@@ -318,6 +326,79 @@ function renderPlan(){
     }
     renderPlan();
   };
+}
+
+/* ---------- Progreso de pesos por ejercicio (lo que el alumno anota
+   día a día en "Mi Plan") ---------- */
+function pesoHistoryKey(){
+  return `peso_historial_${alumnoActual}`;
+}
+function getPesoHistory(){
+  return JSON.parse(localStorage.getItem(pesoHistoryKey()) || "{}");
+}
+function getPesoDeHoy(nombreEjercicio){
+  const fecha = new Date().toISOString().slice(0,10);
+  const hist = getPesoHistory();
+  const entrada = (hist[nombreEjercicio] || []).find(e => e.fecha === fecha);
+  return entrada ? entrada.valor : "";
+}
+function guardarPesoEjercicio(nombreEjercicio, peso){
+  const fecha = new Date().toISOString().slice(0,10);
+  const hist = getPesoHistory();
+  if (!hist[nombreEjercicio]) hist[nombreEjercicio] = [];
+  const idx = hist[nombreEjercicio].findIndex(e => e.fecha === fecha);
+  if (idx >= 0) hist[nombreEjercicio][idx].valor = peso;
+  else hist[nombreEjercicio].push({ fecha, valor: peso });
+  hist[nombreEjercicio].sort((a,b) => a.fecha.localeCompare(b.fecha));
+  localStorage.setItem(pesoHistoryKey(), JSON.stringify(hist));
+}
+
+let pesoChartInstance = null;
+function renderPesoProgreso(){
+  const hist = getPesoHistory();
+  const nombres = Object.keys(hist).filter(n => (hist[n] || []).length);
+  const card = $("#pesoCard");
+  const select = $("#pesoSelect");
+
+  if (!nombres.length){
+    card.style.display = "none";
+    if (pesoChartInstance) pesoChartInstance.destroy();
+    return;
+  }
+
+  card.style.display = "block";
+  select.innerHTML = nombres.map(n => `<option value="${n}">${n}</option>`).join("");
+  select.onchange = () => dibujarPeso(select.value);
+  dibujarPeso(select.value || nombres[0]);
+}
+function dibujarPeso(nombreEjercicio){
+  const datos = (getPesoHistory()[nombreEjercicio]) || [];
+  const ctx = $("#pesoChart").getContext("2d");
+  if (pesoChartInstance) pesoChartInstance.destroy();
+  pesoChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: datos.map(d => d.fecha),
+      datasets: [{
+        label: nombreEjercicio,
+        data: datos.map(d => d.valor),
+        borderColor: "#FF5E23",
+        backgroundColor: "rgba(255,94,35,0.15)",
+        tension: 0.25,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: "#D8B93B"
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#9A9A94" }, grid: { color: "#3A3A3E" } },
+        y: { ticks: { color: "#9A9A94" }, grid: { color: "#3A3A3E" } }
+      }
+    }
+  });
 }
 
 /* ---------- Tests (gráfico histórico) ---------- */
@@ -722,6 +803,42 @@ async function cargarRutinasDesdeExcel(){
   }
 }
 
+/* ---------- Carga de videos.xlsx (SheetJS) ----------
+   Pestaña "Ejercicios": columnas Categoría | Ejercicio | Link video
+   Pestaña "Métodos de entrenamiento": columnas Método | Descripción ---------- */
+async function cargarVideosDesdeExcel(){
+  try{
+    const resp = await fetch("videos.xlsx", { cache: "no-store" });
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+
+    if (wb.SheetNames.includes("Ejercicios")){
+      const filas = XLSX.utils.sheet_to_json(wb.Sheets["Ejercicios"], { defval: "" });
+      VIDEOS = filas
+        .map(f => ({
+          grupo: String(f["Categoría"] || f["Categoria"] || "").trim(),
+          titulo: String(f["Ejercicio"] || "").trim(),
+          url: String(f["Link video"] || f["Link"] || f["URL"] || "").trim()
+        }))
+        .filter(v => v.titulo && v.url);
+    }
+
+    if (wb.SheetNames.includes("Métodos de entrenamiento")){
+      const filas = XLSX.utils.sheet_to_json(wb.Sheets["Métodos de entrenamiento"], { defval: "" });
+      METODOS_ENTRENAMIENTO = filas
+        .map(f => ({
+          nombre: String(f["Método"] || f["Metodo"] || "").trim(),
+          descripcion: String(f["Descripción"] || f["Descripcion"] || "").trim()
+        }))
+        .filter(m => m.nombre);
+    }
+  }catch(err){
+    console.error("No se pudo cargar videos.xlsx:", err);
+    // Si falla, la app sigue funcionando con la video-biblioteca vacía en
+    // vez de romperse.
+  }
+}
+
 /* ---------- Fichas (PDFs por patrón de movimiento) ---------- */
 function renderFichas(){
   if (!FICHAS.length){
@@ -743,7 +860,7 @@ function renderFichas(){
 /* ---------- Init general ---------- */
 async function renderAll(){
   if (!alumnoActual) return;
-  await rutinasListas;
+  await Promise.all([rutinasListas, videosListos]);
   renderInicio();
   renderPlan();
   renderVideos();
@@ -752,6 +869,7 @@ async function renderAll(){
 }
 
 const rutinasListas = cargarRutinasDesdeExcel();
+const videosListos = cargarVideosDesdeExcel();
 
 initSelectorAlumno();
 initRpe();

@@ -83,7 +83,14 @@ const TESTS = {
 };
 
 // 5) Video-biblioteca (compartida para todos los alumnos)
-const VIDEOS = [
+//    Ahora se lee directamente del archivo videos.xlsx (pestañas "Ejercicios"
+//    y "Métodos de entrenamiento") — no hace falta tocar este archivo para
+//    sumar videos nuevos. "VIDEOS" y "METODOS_ENTRENAMIENTO" se completan
+//    solos al cargar la app (ver app.js).
+let VIDEOS = [];
+let METODOS_ENTRENAMIENTO = [];
+/* Contenido de ejemplo, ya no se usa (queda comentado como referencia del formato):
+const VIDEOS_EJEMPLO = [
   { titulo: "Bear crawl static", grupo: "CORE – ZONA MEDIA", url: "https://www.youtube.com/watch?v=aN0RkNxtrWA&list=UUTr6ksZa-Omw10sOpij44dw&index=64" },
   { titulo: "Bird dog dinamic", grupo: "CORE – ZONA MEDIA", url: "https://www.youtube.com/watch?v=lit0rQx-pFo&list=UUTr6ksZa-Omw10sOpij44dw&index=63" },
   { titulo: "Bird dog static", grupo: "CORE – ZONA MEDIA", url: "https://www.youtube.com/watch?v=TkEyX1Ddllc&list=UUTr6ksZa-Omw10sOpij44dw&index=62" },
@@ -247,13 +254,16 @@ const VIDEOS = [
   { titulo: "Knees jump", grupo: "Potencia", url: "https://www.youtube.com/watch?v=3H-uZf0U0Uw&list=UUTr6ksZa-Omw10sOpij44dw&index=81" },
 ];
 
-const METODOS_ENTRENAMIENTO = [
+/* Contenido de ejemplo, ya no se usa (se deja comentado como referencia del formato):
+
+const METODOS_ENTRENAMIENTO_EJEMPLO = [
   { nombre: "Amrap", descripcion: "Es una sigla en inglés que significa “As Many Reps/Rounds As Possible” (Máximas repeticiones o rondas posibles). Es decir que si tienes por ejemplo un Amrap de 5’ de 10 Air squats, 10 push ups y 10 crunches, lo que tendrás que hacer es repetir esos ejercicios la mayor cantidad de veces que puedas dentro de los 5’." },
   { nombre: "Chipper", descripcion: "En el Chipper, tienes que realizar las repeticiones del ejercicio que primero se encuentra, y hasta que no lo termines no puedes pasar la siguiente. Eso sí, cada ejercicio lo harás solamente una vez. En el caso de que tengas un chipper de 50 Air squats, 50 V ups y 50 Plank get up, lo que deberás hacer es: Primero las 50 sentadillas, una vez que finalizas, haces los 50 Abs v ups, y una vez que los terminas, haces los 50 Plank get up." },
   { nombre: "Emom", descripcion: "Esta sigla en inglés (Every Minute On the Minute) significa \"cada minuto en el minuto\". Este tipo de entrenamiento consiste en realizar un número determinado de repeticiones dentro de un minuto. Por lo tanto, si tienes un EMOM de 5’ de 20 Squat jump, lo que tendrás que hacer es realizar dentro de cada minuto las 20 Sentadillas con salto. Lo que sobre del minuto lo utilizarás para descansar, y cuando vuelva a comenzar el siguiente minuto, repetirás la secuencia. Así hasta completar los 5’." },
   { nombre: "OTM", descripcion: "De la sigla en inglés “ON THE MINUTE” es muy similar al EMOM, nada más que en este caso, se realizarán distintos ejercicios en cada minuto, por ejemplo, si tienes un OTM de 9’ con en el 1° minuto 20 Push ups, en el 2° minuto 20 Hollow rocks y en el 3° minuto 20 Lunges, harás en el primer minuto las 20 flexiones de brazo y lo que te sobre de tiempo descansarás. En el minuto 2, los 20 hollow rocks y lo que sobre del minuto lo descansarás. En el minuto 3, las 20 estocadas y lo que sobre del minuto lo descansarás. Y cuando comience el  4to minuto volverás a comenzar por el ejercicio del 1er minuto. Así con los tres ejercicios hasta completar los 9’." },
   { nombre: "Tabata", descripcion: "En el tabata, tendrás determinado tu tiempo de trabajo asi como también el de descanso. Suponiendo que tienes un tabata de 40’’x20’’x5’, realizarás 40’’ de trabajo del ejercicio que se haya indicado, 20’’ descansarás, y repetirás hasta llegar a los 5’." },
 ];
+*/
 
 // 6) Perfil del profe: foto y carta de presentación
 //    "foto": pegá el nombre de archivo de tu foto (ej: "eric.jpg"), subiéndola

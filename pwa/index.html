@@ -48,7 +48,10 @@
     background:
       repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 9px),
       var(--bg);
-    padding:calc(18px + env(safe-area-inset-top)) 20px 14px;
+    padding-top:calc(18px + env(safe-area-inset-top));
+    padding-bottom:14px;
+    padding-left:max(20px, calc((100% - 640px) / 2 + 16px));
+    padding-right:max(20px, calc((100% - 640px) / 2 + 16px));
     border-bottom:none;
   }
   header::after{
@@ -89,6 +92,8 @@
     display:flex; background:var(--surface);
     border-top:none; box-shadow:0 -1px 0 0 var(--line);
     padding-bottom:env(safe-area-inset-bottom);
+    padding-left:max(0px, calc((100% - 640px) / 2 + 16px));
+    padding-right:max(0px, calc((100% - 640px) / 2 + 16px));
   }
   nav.tabbar::before{
     content:""; display:block; position:absolute; top:-2px; left:0; right:0; height:2px;
