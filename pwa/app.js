@@ -447,6 +447,22 @@ function dibujarTest(nombreTest){
       }
     }
   });
+
+  // Tabla de porcentajes del último valor — solo para tests de fuerza (%RM),
+  // no tiene sentido mostrarla para tests que no son de peso (ej: salto en cm).
+  const pctCard = $("#testPct");
+  const esTestDeFuerza = EJERCICIOS_RM.includes(nombreTest);
+  if (esTestDeFuerza && datos.length){
+    const ultimo = datos[datos.length - 1].valor;
+    const porcentajes = [100,95,90,85,80,75,70,65,60,55,50];
+    $("#testPctValor").textContent = ultimo + " kg";
+    $("#testPctTabla").innerHTML = porcentajes.map(p =>
+      `<tr><td>${p}%</td><td>${(ultimo*p/100).toFixed(1)} kg</td></tr>`
+    ).join("");
+    pctCard.style.display = "block";
+  } else {
+    pctCard.style.display = "none";
+  }
 }
 
 /* ---------- RPE ---------- */
