@@ -775,10 +775,32 @@ async function cargarRutinasDesdeExcel(){
     const resp = await fetch("rutinas.xlsx", { cache: "no-store" });
     const buf = await resp.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
+
+    // Pestaña "Alumnos" (columnas Nombre | PIN): si el profe agrega o saca
+    // un alumno ahí, la app actualiza la lista sola. El perfil
+    // "Demo (probar la app)" siempre queda fijo, no depende del Excel.
+    if (wb.SheetNames.includes("Alumnos")){
+      const filasAlumnos = XLSX.utils.sheet_to_json(wb.Sheets["Alumnos"], { defval: "" });
+      const nombresNuevos = [];
+      const pinsNuevos = {};
+      filasAlumnos.forEach(f => {
+        const nombre = String(f["Nombre"] || "").trim();
+        if (!nombre) return;
+        let pin = String(f["PIN"] || "").trim();
+        if (pin && pin.length < 4) pin = pin.padStart(4, "0"); // por si Excel saca un cero adelante
+        nombresNuevos.push(nombre);
+        pinsNuevos[nombre] = pin;
+      });
+      if (nombresNuevos.length){
+        ALUMNOS = [ALUMNOS[0], ...nombresNuevos]; // ALUMNOS[0] es siempre "Demo (probar la app)"
+        PINS = Object.assign({}, PINS, pinsNuevos);
+      }
+    }
+
     const nuevo = {};
 
     wb.SheetNames.forEach(nombreHoja => {
-      if (nombreHoja === "LEEME") return;
+      if (nombreHoja === "LEEME" || nombreHoja === "Alumnos") return;
       if (!ALUMNOS.includes(nombreHoja)) return; // ignora pestañas que no son de un alumno
 
       const filas = XLSX.utils.sheet_to_json(wb.Sheets[nombreHoja], { defval: "" });
@@ -887,10 +909,16 @@ async function renderAll(){
 const rutinasListas = cargarRutinasDesdeExcel();
 const videosListos = cargarVideosDesdeExcel();
 
-initSelectorAlumno();
-initRpe();
-initRm();
-if (alumnoActual) renderAll();
+// Esperamos a que termine de leerse rutinas.xlsx (que ahora también trae la
+// lista de alumnos, pestaña "Alumnos") ANTES de mostrar el selector de
+// alumno — así ALUMNOS/PINS ya están actualizados y ningún alumno que
+// vuelve a entrar se queda afuera por una carrera entre el fetch y el login.
+rutinasListas.then(() => {
+  initSelectorAlumno();
+  initRpe();
+  initRm();
+  if (alumnoActual) renderAll();
+});
 
 if ("serviceWorker" in navigator){
   window.addEventListener("load", () => {

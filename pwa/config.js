@@ -12,49 +12,20 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTtAJs1MDOMoceDODzDFoCbd_IKHdhOn6MEiKr3vBtR2_UW4U1opQs4n1hUtVvTJkj/exec";
 
 // 2) Lista de alumnos
-const ALUMNOS = [
-  "Demo (probar la app)",
-  "Eric Tomanovich",
-  "Sebastián Muratore",
-  "Ezequiel Fasciolo",
-  "Barbara Lauriente",
-  "Germán Muratore",
-  "Romano Copello",
-  "Juan Lauriente",
-  "Josefina Pellejero",
-  "Juan Ignacio Giancarli",
-  "Johana Araujo",
-  "Elio Acevedo",
-  "Valeria Blois",
-  "Natalia Sanchez",
-  "Rocio Duchi",
-  "Candela Stamadianos",
-  "Mario Flores",
-  "Nancy Noguera"
+//    Ahora se lee directamente de la pestaña "Alumnos" del archivo
+//    rutinas.xlsx (columnas Nombre | PIN) — no hace falta tocar este
+//    archivo para sumar o sacar un alumno. Acá solo queda fijo el perfil
+//    "Demo (probar la app)", que nunca depende del Excel.
+//    "ALUMNOS" y "PINS" se completan solos al cargar la app (ver app.js).
+let ALUMNOS = [
+  "Demo (probar la app)"
 ];
 
 // 2.1) PIN de 4 dígitos por alumno — se lo pasás vos a cada uno (por
 //      WhatsApp, por ejemplo). Sin el PIN correcto no pueden entrar a
 //      ver la rutina, ni la suya ni la de otro compañero.
-const PINS = {
-  "Demo (probar la app)": "0000",
-  "Eric Tomanovich": "0001",
-  "Sebastián Muratore": "2824",
-  "Ezequiel Fasciolo": "1409",
-  "Barbara Lauriente": "5506",
-  "Germán Muratore": "5012",
-  "Romano Copello": "4657",
-  "Juan Lauriente": "3286",
-  "Josefina Pellejero": "2679",
-  "Juan Ignacio Giancarli": "9935",
-  "Johana Araujo": "2424",
-  "Elio Acevedo": "7912",
-  "Valeria Blois": "1520",
-  "Natalia Sanchez": "1488",
-  "Rocio Duchi": "2535",
-  "Candela Stamadianos": "4582",
-  "Mario Flores": "4811",
-  "Nancy Noguera": "9279"
+let PINS = {
+  "Demo (probar la app)": "0000"
 };
 
 // 3) Rutinas por alumno, organizadas por SEMANA
