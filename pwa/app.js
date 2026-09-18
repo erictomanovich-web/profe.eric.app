@@ -2,19 +2,19 @@
    APP.JS — lógica de la app. No hace falta tocar esto para
    cargar rutinas/tests nuevos: eso se edita en config.js.
    ============================================================ */
-
+ 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
-
+ 
 let alumnoActual = localStorage.getItem("alumnoActual") || null;
-
+ 
 function abrirSelectorParaCambiar(){
   $("#pasoPin").style.display = "none";
   $("#pasoNombre").style.display = "block";
   $("#cancelarCambio").style.display = "block";
   $("#selectorOverlay").style.display = "flex";
 }
-
+ 
 /* ---------- Selector de alumno + PIN ---------- */
 function initSelectorAlumno(){
   const overlay = $("#selectorOverlay");
@@ -22,9 +22,9 @@ function initSelectorAlumno(){
   const pasoPin = $("#pasoPin");
   const list = $("#alumnoList");
   list.innerHTML = "";
-
+ 
   let alumnoPendiente = null;
-
+ 
   function mostrarPasoPin(nombre){
     alumnoPendiente = nombre;
     $("#pinTitulo").textContent = `Hola, ${nombre.split(" ")[0]}`;
@@ -34,7 +34,7 @@ function initSelectorAlumno(){
     pasoPin.style.display = "block";
     $("#pinInput").focus();
   }
-
+ 
   ALUMNOS.forEach(nombre => {
     const b = document.createElement("button");
     b.className = "alumno-opt";
@@ -42,7 +42,7 @@ function initSelectorAlumno(){
     b.onclick = () => mostrarPasoPin(nombre);
     list.appendChild(b);
   });
-
+ 
   function intentarEntrar(){
     const pin = $("#pinInput").value.trim();
     if (pin === (PINS[alumnoPendiente] || "")){
@@ -65,7 +65,7 @@ function initSelectorAlumno(){
   $("#cancelarCambio").addEventListener("click", () => {
     overlay.style.display = "none";
   });
-
+ 
   if (alumnoActual && ALUMNOS.includes(alumnoActual)) {
     overlay.style.display = "none";
   } else {
@@ -73,14 +73,14 @@ function initSelectorAlumno(){
     overlay.style.display = "flex";
   }
 }
-
+ 
 /* ---------- Navegación entre tabs ---------- */
 const TITULOS = {
   inicio: "Inicio", plan: "Mi Plan", tests: "Tests",
   rpe: "RPE", rm: "Calculadora %RM", videos: "Videos", fichas: "Fichas",
   sobre: "Sobre mí", faq: "Preguntas frecuentes"
 };
-
+ 
 function goTo(view){
   $$(".view").forEach(v => v.classList.remove("active"));
   $(`#view-${view}`).classList.add("active");
@@ -96,39 +96,39 @@ $("#sobreLink").addEventListener("click", () => goTo("sobre"));
 $("#faqLink").addEventListener("click", () => goTo("faq"));
 $("#alumnoChip").addEventListener("click", abrirSelectorParaCambiar);
 $$("[data-back]").forEach(a => a.addEventListener("click", (e) => { e.preventDefault(); goTo("inicio"); }));
-
+ 
 /* ---------- Semana / progreso ---------- */
 function getSemanasDisponibles(){
   const rutinaAlumno = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
   return Object.keys(rutinaAlumno).map(Number).sort((a,b) => a-b);
 }
-
+ 
 // La semana con el número más alto cargada por el profe es la "actual"
 function getSemanaActual(){
   const semanas = getSemanasDisponibles();
   return semanas.length ? semanas[semanas.length - 1] : null;
 }
-
+ 
 function rutinaDeSemana(semana){
   const rutinaAlumno = RUTINAS[alumnoActual] || RUTINA_DEFAULT;
   return rutinaAlumno[semana] || [];
 }
-
+ 
 let semanaSeleccionada = null;
 let diaSeleccionado = null;
-
+ 
 function diasDisponibles(semana){
   const dias = [...new Set(rutinaDeSemana(semana).map(ej => ej.dia))];
   return dias.sort((a,b) => a-b);
 }
-
+ 
 function diasCompletadosKey(semana){
   return `dias_ok_${alumnoActual}_sem${semana}`;
 }
 function getDiasCompletados(semana){
   return JSON.parse(localStorage.getItem(diasCompletadosKey(semana)) || "[]");
 }
-
+ 
 // Historial acumulado de semanas 100% completadas (no se resetea nunca)
 function historialSemanasKey(){
   return `historial_semanas_${alumnoActual}`;
@@ -149,19 +149,25 @@ function actualizarHistorialSemana(semana){
     localStorage.setItem(historialSemanasKey(), JSON.stringify(historial));
   }
 }
-
+ 
 function checklistKey(semana, dia){
   return `check_${alumnoActual}_sem${semana}_dia${dia}`;
 }
-
+ 
+// Observaciones personales del alumno por día de entrenamiento (privado,
+// no se envía a ningún lado — solo queda guardado en su propio teléfono).
+function notasDiaKey(semana, dia){
+  return `notas_${alumnoActual}_sem${semana}_dia${dia}`;
+}
+ 
 /* ---------- Chip de alumno + Inicio ---------- */
 function renderInicio(){
   $("#alumnoChip").style.display = "inline-flex";
   $("#alumnoNombre").textContent = alumnoActual;
-
+ 
   const semanaActual = getSemanaActual();
   const totalSemanas = getHistorialSemanas().length;
-
+ 
   if (semanaActual === null){
     $("#resumenHoy").innerHTML = `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
   } else {
@@ -173,7 +179,7 @@ function renderInicio(){
        <div class="ejercicio"><div><div class="nombre">${totalSemanas} semana${totalSemanas === 1 ? "" : "s"} completa${totalSemanas === 1 ? "" : "s"} en total</div>
         <div class="detalle">Se suma cada vez que terminás todos los días de una semana</div></div></div>`;
   }
-
+ 
   const hist = getRpeHistorial();
   const ultimo = hist.length ? hist[hist.length - 1] : null;
   const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
@@ -187,7 +193,7 @@ function renderInicio(){
   }
   $("#resumenRpe").innerHTML = resumenRpeHtml;
 }
-
+ 
 /* ---------- Mi Plan (selector de semana + tabs de día + rutina) ---------- */
 function renderPlan(){
   const semanas = getSemanasDisponibles();
@@ -196,22 +202,24 @@ function renderPlan(){
   const semanaSelect = $("#semanaSelect");
   const btn = $("#terminarDiaBtn");
   const status = $("#diaStatus");
+  const notasCard = $("#notasCard");
   status.textContent = "";
-
+ 
   if (!semanas.length){
     semanaSelect.innerHTML = "";
     semanaSelect.style.display = "none";
     tabsCont.innerHTML = "";
     btn.style.display = "none";
+    notasCard.style.display = "none";
     cont.innerHTML = `<div class="detalle">Todavía no tenés una rutina cargada. Hablá con tu profe.</div>`;
     return;
   }
-
+ 
   const semanaActual = getSemanaActual();
   if (semanaSeleccionada === null || !semanas.includes(semanaSeleccionada)){
     semanaSeleccionada = semanaActual;
   }
-
+ 
   // Selector de semana (la más alta = actual, el resto queda como historial)
   semanaSelect.style.display = "block";
   semanaSelect.innerHTML = semanas.map(s =>
@@ -222,14 +230,14 @@ function renderPlan(){
     diaSeleccionado = null;
     renderPlan();
   };
-
+ 
   const dias = diasDisponibles(semanaSeleccionada);
   const completados = getDiasCompletados(semanaSeleccionada);
-
+ 
   if (diaSeleccionado === null || !dias.includes(diaSeleccionado)){
     diaSeleccionado = dias.find(d => !completados.includes(d)) ?? dias[0];
   }
-
+ 
   // Tabs de día
   tabsCont.innerHTML = "";
   dias.forEach(dia => {
@@ -239,24 +247,33 @@ function renderPlan(){
     tab.addEventListener("click", () => { diaSeleccionado = dia; renderPlan(); });
     tabsCont.appendChild(tab);
   });
-
+ 
+  // Observaciones personales de este día (privado, solo para el alumno)
+  notasCard.style.display = "block";
+  const notasKey = notasDiaKey(semanaSeleccionada, diaSeleccionado);
+  const notasArea = $("#notasDia");
+  notasArea.value = localStorage.getItem(notasKey) || "";
+  notasArea.oninput = (e) => {
+    localStorage.setItem(notasKey, e.target.value);
+  };
+ 
   // Ejercicios del día, agrupados por categoría en orden fijo
   const doneKey = checklistKey(semanaSeleccionada, diaSeleccionado);
   let done = JSON.parse(localStorage.getItem(doneKey) || "[]");
   const rutinaConIndice = rutinaDeSemana(semanaSeleccionada).map((ej, i) => ({ ...ej, _i: i }));
-
+ 
   cont.innerHTML = "";
   CATEGORIAS_ORDEN.forEach(categoria => {
     const ejerciciosCat = rutinaConIndice.filter(
       ej => ej.dia === diaSeleccionado && ej.categoria === categoria
     );
     if (!ejerciciosCat.length) return;
-
+ 
     const header = document.createElement("div");
     header.className = "categoria-header";
     header.textContent = categoria;
     cont.appendChild(header);
-
+ 
     // Agrupar ejercicios consecutivos que compartan el mismo "circuito"
     let idx = 0;
     while (idx < ejerciciosCat.length){
@@ -279,7 +296,7 @@ function renderPlan(){
       }
     }
   });
-
+ 
   function renderEjercicioRow(ej, i, done, doneKey){
     const row = document.createElement("div");
     row.className = "ejercicio";
@@ -303,13 +320,16 @@ function renderPlan(){
       localStorage.setItem(doneKey, JSON.stringify(d));
       renderPlan();
     });
-    row.querySelector(".peso-input").addEventListener("change", (e) => {
+    // "input" (no "change"): guarda con cada tecla, así el peso queda
+    // guardado al toque aunque el alumno no llegue a salir del campo (por
+    // ejemplo si toca el check ✓ enseguida y la fila se vuelve a dibujar).
+    row.querySelector(".peso-input").addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       if (!isNaN(val) && val > 0) guardarPesoEjercicio(ej.nombre, val);
     });
     return row;
   }
-
+ 
   // Botón de marcar día como terminado
   btn.style.display = "block";
   const yaCompletado = completados.includes(diaSeleccionado);
@@ -327,7 +347,7 @@ function renderPlan(){
     renderPlan();
   };
 }
-
+ 
 /* ---------- Progreso de pesos por ejercicio (lo que el alumno anota
    día a día en "Mi Plan") ---------- */
 function pesoHistoryKey(){
@@ -352,20 +372,20 @@ function guardarPesoEjercicio(nombreEjercicio, peso){
   hist[nombreEjercicio].sort((a,b) => a.fecha.localeCompare(b.fecha));
   localStorage.setItem(pesoHistoryKey(), JSON.stringify(hist));
 }
-
+ 
 let pesoChartInstance = null;
 function renderPesoProgreso(){
   const hist = getPesoHistory();
   const nombres = Object.keys(hist).filter(n => (hist[n] || []).length);
   const card = $("#pesoCard");
   const select = $("#pesoSelect");
-
+ 
   if (!nombres.length){
     card.style.display = "none";
     if (pesoChartInstance) pesoChartInstance.destroy();
     return;
   }
-
+ 
   card.style.display = "block";
   select.innerHTML = nombres.map(n => `<option value="${n}">${n}</option>`).join("");
   select.onchange = () => dibujarPeso(select.value);
@@ -400,25 +420,25 @@ function dibujarPeso(nombreEjercicio){
     }
   });
 }
-
+ 
 /* ---------- Tests (gráfico histórico) ---------- */
 let testChartInstance = null;
 function renderTests(){
   const tests = getTestsCombinados();
   const nombres = Object.keys(tests);
   const select = $("#testSelect");
-
+ 
   if (!nombres.length){
     select.innerHTML = `<option>Sin tests cargados</option>`;
     if (testChartInstance) testChartInstance.destroy();
     return;
   }
-
+ 
   select.innerHTML = nombres.map(n => `<option value="${n}">${n}</option>`).join("");
   select.onchange = () => dibujarTest(select.value);
   dibujarTest(select.value || nombres[0]);
 }
-
+ 
 function dibujarTest(nombreTest){
   const datos = (getTestsCombinados()[nombreTest]) || [];
   const ctx = $("#testChart").getContext("2d");
@@ -447,7 +467,7 @@ function dibujarTest(nombreTest){
       }
     }
   });
-
+ 
   // Tabla de porcentajes del último valor — solo para tests de fuerza (%RM),
   // no tiene sentido mostrarla para tests que no son de peso (ej: salto en cm).
   const pctCard = $("#testPct");
@@ -464,10 +484,10 @@ function dibujarTest(nombreTest){
     pctCard.style.display = "none";
   }
 }
-
+ 
 /* ---------- RPE ---------- */
 const RPE_LABELS = ["Nada","Muy muy leve","Muy leve","Leve","Moderado","Algo duro","Duro","Muy duro","Muy muy duro","Casi máximo","Máximo"];
-
+ 
 function initRpe(){
   $("#rpeFecha").value = new Date().toISOString().slice(0,10);
   const slider = $("#rpeSlider");
@@ -477,10 +497,10 @@ function initRpe(){
   };
   slider.addEventListener("input", actualizar);
   actualizar();
-
+ 
   $("#rpeEnviar").addEventListener("click", enviarRpe);
 }
-
+ 
 function rpeHistorialKey(){
   return `rpe_historial_${alumnoActual}`;
 }
@@ -493,18 +513,18 @@ function guardarEnHistorialRpe(payload){
   hist.sort((a,b) => a.fecha.localeCompare(b.fecha));
   localStorage.setItem(rpeHistorialKey(), JSON.stringify(hist));
 }
-
+ 
 let rpeChartInstance = null;
 function renderRpeHistorial(){
   const hist = getRpeHistorial();
   const ctx = $("#rpeChart").getContext("2d");
   if (rpeChartInstance) rpeChartInstance.destroy();
-
+ 
   if (!hist.length){
     $("#rpeHistorialLista").innerHTML = `<div class="detalle">Todavía no registraste ningún RPE.</div>`;
     return;
   }
-
+ 
   rpeChartInstance = new Chart(ctx, {
     type: "line",
     data: {
@@ -529,7 +549,7 @@ function renderRpeHistorial(){
       }
     }
   });
-
+ 
   const ultimos = [...hist].reverse().slice(0, 10);
   $("#rpeHistorialLista").innerHTML = ultimos.map(h => `
     <div class="rpe-hist-item">
@@ -541,7 +561,7 @@ function renderRpeHistorial(){
     </div>
   `).join("");
 }
-
+ 
 async function enviarRpe(){
   const payload = {
     alumno: alumnoActual,
@@ -554,18 +574,18 @@ async function enviarRpe(){
   const statusEl = $("#rpeStatus");
   statusEl.className = "status-msg";
   statusEl.textContent = "Enviando...";
-
+ 
   // Se guarda en el historial propio del alumno pase lo que pase con el envío
   guardarEnHistorialRpe(payload);
   renderRpeHistorial();
-
+ 
   if (!APPS_SCRIPT_URL){
     guardarPendiente(payload);
     statusEl.textContent = "Guardado. (Tu profe todavía no activó el envío centralizado.)";
     limpiarFormRpe();
     return;
   }
-
+ 
   try{
     await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -583,18 +603,18 @@ async function enviarRpe(){
     statusEl.classList.add("err");
   }
 }
-
+ 
 function limpiarFormRpe(){
   $("#rpeSueno").value = "";
   $("#rpeDolor").value = "";
 }
-
+ 
 function guardarPendiente(payload){
   const pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
   pend.push(payload);
   localStorage.setItem("rpePendientes", JSON.stringify(pend));
 }
-
+ 
 async function reintentarPendientes(){
   if (!APPS_SCRIPT_URL) return;
   let pend = JSON.parse(localStorage.getItem("rpePendientes") || "[]");
@@ -611,7 +631,7 @@ async function reintentarPendientes(){
   }
   localStorage.setItem("rpePendientes", JSON.stringify(restantes));
 }
-
+ 
 /* ---------- Calculadora %RM + registro de test ---------- */
 function rmHistoryKey(){
   return `rm_history_${alumnoActual}`;
@@ -619,13 +639,13 @@ function rmHistoryKey(){
 function getRmHistory(){
   return JSON.parse(localStorage.getItem(rmHistoryKey()) || "{}");
 }
-
+ 
 function initRm(){
   const select = $("#rmEjercicio");
   select.innerHTML = EJERCICIOS_RM.map(e => `<option value="${e}">${e}</option>`).join("");
-
+ 
   let ultimoRm = null;
-
+ 
   $("#rmCalcular").addEventListener("click", () => {
     const peso = parseFloat($("#rmPeso").value);
     const reps = parseFloat($("#rmReps").value);
@@ -643,22 +663,22 @@ function initRm(){
     $("#rmStatus").textContent = "";
     $("#rmStatus").className = "status-msg";
   });
-
+ 
   $("#rmGuardar").addEventListener("click", async () => {
     if (ultimoRm === null) return;
     const ejercicio = select.value;
     const fecha = new Date().toISOString().slice(0,10);
     const statusEl = $("#rmStatus");
-
+ 
     // Guardar localmente para que aparezca ya mismo en "Tests"
     const hist = getRmHistory();
     if (!hist[ejercicio]) hist[ejercicio] = [];
     hist[ejercicio].push({ fecha, valor: Math.round(ultimoRm * 10) / 10 });
     localStorage.setItem(rmHistoryKey(), JSON.stringify(hist));
-
+ 
     statusEl.textContent = "¡Guardado! Ya lo podés ver en 'Tests'.";
     statusEl.classList.add("ok");
-
+ 
     // Mandarlo también al backend, si está configurado (mismo Sheet que el RPE)
     if (APPS_SCRIPT_URL){
       const payload = { tipo: "test_rm", alumno: alumnoActual, ejercicio, peso: $("#rmPeso").value, reps: $("#rmReps").value, rm: ultimoRm.toFixed(1), fecha, ts: new Date().toISOString() };
@@ -672,7 +692,7 @@ function initRm(){
     }
   });
 }
-
+ 
 /* ---------- Tests combinados: los que carga el profe + los que se
    auto-registra el alumno desde %RM ---------- */
 function getTestsCombinados(){
@@ -685,7 +705,7 @@ function getTestsCombinados(){
   });
   return base;
 }
-
+ 
 /* ---------- Videos ---------- */
 function renderVideos(){
   const buscador = $("#videoBuscador");
@@ -693,18 +713,18 @@ function renderVideos(){
   dibujarVideos("");
   renderMetodos();
 }
-
+ 
 function dibujarVideos(filtro){
   const f = filtro.trim().toLowerCase();
   const filtrados = f
     ? VIDEOS.filter(v => v.titulo.toLowerCase().includes(f) || v.grupo.toLowerCase().includes(f))
     : VIDEOS;
-
+ 
   if (!filtrados.length){
     $("#listaVideos").innerHTML = `<div class="detalle">No se encontraron ejercicios para "${filtro}".</div>`;
     return;
   }
-
+ 
   // Agrupar manteniendo el orden en que aparecen los grupos
   const grupos = [];
   const porGrupo = {};
@@ -712,7 +732,7 @@ function dibujarVideos(filtro){
     if (!porGrupo[v.grupo]){ porGrupo[v.grupo] = []; grupos.push(v.grupo); }
     porGrupo[v.grupo].push(v);
   });
-
+ 
   $("#listaVideos").innerHTML = grupos.map(g => `
     <div class="categoria-header">${g}</div>
     ${porGrupo[g].map(v => `
@@ -728,7 +748,7 @@ function dibujarVideos(filtro){
       </div>`).join("")}
   `).join("");
 }
-
+ 
 /* ---------- Métodos de entrenamiento (glosario tipo acordeón) ---------- */
 function renderMetodos(){
   $("#listaMetodos").innerHTML = METODOS_ENTRENAMIENTO.map((m, i) => `
@@ -741,7 +761,7 @@ function renderMetodos(){
     el.querySelector(".faq-pregunta").addEventListener("click", () => el.classList.toggle("open"));
   });
 }
-
+ 
 /* ---------- Sobre mí (bio + foto + novedades) ---------- */
 function renderSobre(){
   $("#bioTexto").innerHTML = PERFIL.bio.split("\n\n").map(p => `<p>${p}</p>`).join("");
@@ -751,7 +771,7 @@ function renderSobre(){
   }
   $("#instagramBtn").href = PERFIL.instagram || "#";
 }
-
+ 
 /* ---------- FAQ ---------- */
 function renderFaq(){
   if (!FAQ.length){
@@ -768,14 +788,14 @@ function renderFaq(){
     el.querySelector(".faq-pregunta").addEventListener("click", () => el.classList.toggle("open"));
   });
 }
-
+ 
 /* ---------- Carga de rutinas.xlsx (SheetJS) ---------- */
 async function cargarRutinasDesdeExcel(){
   try{
     const resp = await fetch("rutinas.xlsx", { cache: "no-store" });
     const buf = await resp.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
-
+ 
     // Pestaña "Alumnos" (columnas Nombre | PIN): si el profe agrega o saca
     // un alumno ahí, la app actualiza la lista sola. El perfil
     // "Demo (probar la app)" siempre queda fijo, no depende del Excel.
@@ -796,22 +816,22 @@ async function cargarRutinasDesdeExcel(){
         PINS = Object.assign({}, PINS, pinsNuevos);
       }
     }
-
+ 
     const nuevo = {};
-
+ 
     wb.SheetNames.forEach(nombreHoja => {
       if (nombreHoja === "LEEME" || nombreHoja === "Alumnos") return;
       if (!ALUMNOS.includes(nombreHoja)) return; // ignora pestañas que no son de un alumno
-
+ 
       const filas = XLSX.utils.sheet_to_json(wb.Sheets[nombreHoja], { defval: "" });
       const porSemana = {};
-
+ 
       filas.forEach(f => {
         const semana = Number(f["Semana"]);
         const dia = Number(f["Día"] || f["Dia"]);
         const nombreEj = String(f["Ejercicio"] || "").trim();
         if (!semana || !dia || !nombreEj) return; // fila incompleta, se ignora
-
+ 
         const ej = {
           dia,
           categoria: String(f["Categoría"] || f["Categoria"] || "").trim(),
@@ -824,14 +844,14 @@ async function cargarRutinasDesdeExcel(){
           ej.circuito = circuito;
           ej.rounds = f["Rounds"];
         }
-
+ 
         if (!porSemana[semana]) porSemana[semana] = [];
         porSemana[semana].push(ej);
       });
-
+ 
       if (Object.keys(porSemana).length) nuevo[nombreHoja] = porSemana;
     });
-
+ 
     RUTINAS = nuevo;
   }catch(err){
     console.error("No se pudo cargar rutinas.xlsx:", err);
@@ -840,7 +860,7 @@ async function cargarRutinasDesdeExcel(){
     // "todavía no tenés rutina cargada" en vez de romperse.
   }
 }
-
+ 
 /* ---------- Carga de videos.xlsx (SheetJS) ----------
    Pestaña "Ejercicios": columnas Categoría | Ejercicio | Link video
    Pestaña "Métodos de entrenamiento": columnas Método | Descripción ---------- */
@@ -849,7 +869,7 @@ async function cargarVideosDesdeExcel(){
     const resp = await fetch("videos.xlsx", { cache: "no-store" });
     const buf = await resp.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
-
+ 
     if (wb.SheetNames.includes("Ejercicios")){
       const filas = XLSX.utils.sheet_to_json(wb.Sheets["Ejercicios"], { defval: "" });
       VIDEOS = filas
@@ -860,7 +880,7 @@ async function cargarVideosDesdeExcel(){
         }))
         .filter(v => v.titulo && v.url);
     }
-
+ 
     if (wb.SheetNames.includes("Métodos de entrenamiento")){
       const filas = XLSX.utils.sheet_to_json(wb.Sheets["Métodos de entrenamiento"], { defval: "" });
       METODOS_ENTRENAMIENTO = filas
@@ -876,7 +896,7 @@ async function cargarVideosDesdeExcel(){
     // vez de romperse.
   }
 }
-
+ 
 /* ---------- Fichas (PDFs por patrón de movimiento) ---------- */
 function renderFichas(){
   if (!FICHAS.length){
@@ -894,7 +914,7 @@ function renderFichas(){
     </div>
   `).join("");
 }
-
+ 
 /* ---------- Init general ---------- */
 async function renderAll(){
   if (!alumnoActual) return;
@@ -905,10 +925,10 @@ async function renderAll(){
   renderFichas();
   reintentarPendientes();
 }
-
+ 
 const rutinasListas = cargarRutinasDesdeExcel();
 const videosListos = cargarVideosDesdeExcel();
-
+ 
 // Esperamos a que termine de leerse rutinas.xlsx (que ahora también trae la
 // lista de alumnos, pestaña "Alumnos") ANTES de mostrar el selector de
 // alumno — así ALUMNOS/PINS ya están actualizados y ningún alumno que
@@ -919,7 +939,7 @@ rutinasListas.then(() => {
   initRm();
   if (alumnoActual) renderAll();
 });
-
+ 
 if ("serviceWorker" in navigator){
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js").catch(() => {});
