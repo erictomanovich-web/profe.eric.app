@@ -194,6 +194,48 @@ function renderInicio(){
   $("#resumenRpe").innerHTML = resumenRpeHtml;
 }
  
+/* ---------- Video de cada ejercicio de la rutina ----------
+   Al tocar el nombre de un ejercicio en "Mi Plan" se abre su video de YouTube.
+   Orden de búsqueda: 1) pestaña "Equivalencias" de videos.xlsx,
+   2) mismo nombre (sin importar mayúsculas/tildes), 3) variante del mismo
+   ejercicio (ej: "Bench press con mancuernas" usa el video de "Bench press"). */
+let VIDEO_INDEX = {};
+let VIDEO_EQUIV = {};
+function normalizarNombre(s){
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+function construirIndiceVideos(){
+  VIDEO_INDEX = {};
+  VIDEOS.forEach(v => {
+    const k = normalizarNombre(v.titulo);
+    if (k && /^https?:\/\//i.test(v.url) && !VIDEO_INDEX[k]) VIDEO_INDEX[k] = v.url;
+  });
+}
+function buscarVideo(nombreEjercicio){
+  const k = normalizarNombre(nombreEjercicio);
+  if (!k) return null;
+  if (k in VIDEO_EQUIV){
+    const destino = VIDEO_EQUIV[k];
+    return destino ? (VIDEO_INDEX[destino] || null) : null;
+  }
+  if (VIDEO_INDEX[k]) return VIDEO_INDEX[k];
+  let mejor = null;
+  for (const t in VIDEO_INDEX){
+    if (k.startsWith(t + " ") && (mejor === null || t.length > mejor.length)) mejor = t;
+  }
+  return mejor ? VIDEO_INDEX[mejor] : null;
+}
+function escapeAttr(s){
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function nombreConVideo(nombre){
+  const url = buscarVideo(nombre);
+  if (!url) return nombre;
+  return `<a class="ej-video" href="${escapeAttr(url)}" target="_blank" rel="noopener" title="Ver video">${nombre}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/></svg></a>`;
+}
+
 /* ---------- Mi Plan (selector de semana + tabs de día + rutina) ---------- */
 function renderPlan(){
   const semanas = getSemanasDisponibles();
@@ -305,7 +347,7 @@ function renderPlan(){
       <div class="ej-row">
         <div class="check ${done.includes(i) ? "done" : ""}" data-i="${i}"></div>
         <div>
-          <div class="nombre">${ej.nombre}</div>
+          <div class="nombre">${nombreConVideo(ej.nombre)}</div>
           <div class="detalle">${ej.detalle}</div>
         </div>
       </div>
@@ -890,6 +932,19 @@ async function cargarVideosDesdeExcel(){
         }))
         .filter(m => m.nombre);
     }
+    // Pestaña opcional "Equivalencias": columnas "Nombre en la rutina" | "Video de".
+    // Sirve para decirle a la app qué video usar cuando el ejercicio de la rutina
+    // se llama distinto al de la pestaña "Ejercicios". Poné "-" para NO mostrar video.
+    VIDEO_EQUIV = {};
+    if (wb.SheetNames.includes("Equivalencias")){
+      const filas = XLSX.utils.sheet_to_json(wb.Sheets["Equivalencias"], { defval: "" });
+      filas.forEach(f => {
+        const de = normalizarNombre(f["Nombre en la rutina"] || f["Nombre en rutina"] || "");
+        const a = String(f["Video de"] || "").trim();
+        if (de && a) VIDEO_EQUIV[de] = (a === "-") ? null : normalizarNombre(a);
+      });
+    }
+    construirIndiceVideos();
   }catch(err){
     console.error("No se pudo cargar videos.xlsx:", err);
     // Si falla, la app sigue funcionando con la video-biblioteca vacía en
